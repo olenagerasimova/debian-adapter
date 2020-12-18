@@ -15,7 +15,7 @@ This Java library turns your binary storage
 (files, S3 objects, anything) into a Debian repository.
 You may add it to your binary storage and it will become
 a fully-functionable Debian repository, which
-[`apt`](https://ru.wikipedia.org/wiki/Advanced_Packaging_Tool) 
+[`apt`](https://en.wikipedia.org/wiki/APT_(software)) 
 will perfectly understand.
 
 ## How to contribute
