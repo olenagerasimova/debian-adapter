@@ -2,7 +2,7 @@
 <!--
 The MIT License (MIT)
 
-Copyright (c) 2020 artipie.com
+Copyright (c) 2020 Artipie
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -39,7 +39,7 @@ SOFTWARE.
   <licenses>
     <license>
       <name>MIT</name>
-      <url>https://github.com/artipie/debian-adapter/blob/main/LICENSE</url>
+      <url>https://github.com/artipie/debian-adapter/blob/main/LICENSE.txt</url>
     </license>
   </licenses>
   <developers>
@@ -177,7 +177,7 @@ SOFTWARE.
             <exclude>checkstyle:.*/src/test/resources/.*</exclude>
             <exclude>pmd:.*/src/test/resources/.*</exclude>
           </excludes>
-          <license>file:${basedir}/LICENSE</license>
+          <license>file:${basedir}/LICENSE.txt</license>
         </configuration>
       </plugin>
     </plugins>
