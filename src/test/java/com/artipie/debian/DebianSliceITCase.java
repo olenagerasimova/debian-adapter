@@ -44,12 +44,16 @@ import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 import org.testcontainers.Testcontainers;
+import org.testcontainers.containers.Container;
 import org.testcontainers.containers.GenericContainer;
 
 /**
  * Test for {@link com.artipie.debian.http.DebianSlice}.
  * @since 0.1
  * @checkstyle ClassDataAbstractionCouplingCheck (500 lines)
+ * @todo #2:30min Find (or create) package without any dependencies or necessary settings
+ *  for install test: current package `aglfn_1.7-3_all.deb` is now successfully downloaded and
+ *  unpacked, but then debian needs to configure it and fails.
  */
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 @EnabledOnOs({OS.LINUX, OS.MAC})
@@ -86,6 +90,8 @@ public final class DebianSliceITCase {
         );
         new TestResource("pspp_1.2.0-3_amd64.deb")
             .saveTo(storage, new Key.From("main", "pspp_1.2.0-3_amd64.deb"));
+        new TestResource("aglfn_1.7-3_all.deb")
+            .saveTo(storage, new Key.From("main", "aglfn_1.7-3_all.deb"));
         new TestResource("Packages.gz")
             .saveTo(storage, new Key.From("dists/artipie/main/binary-all/Packages.gz"));
         new TestResource("Packages.gz")
@@ -115,6 +121,17 @@ public final class DebianSliceITCase {
         MatcherAssert.assertThat(
             this.cntn.execInContainer("apt-cache", "search", "pspp").getStdout(),
             new StringContainsInOrder(new ListOf<>("pspp", "Statistical analysis tool"))
+        );
+    }
+
+    @Test
+    void installWorks() throws IOException, InterruptedException {
+        final Container.ExecResult res =
+            this.cntn.execInContainer("apt-get", "install", "-y", "aglfn");
+        MatcherAssert.assertThat(
+            "Package was downloaded and unpacked",
+            res.getStdout(),
+            new StringContainsInOrder(new ListOf<>("Unpacking aglfn", "Setting up aglfn"))
         );
     }
 
