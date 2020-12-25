@@ -18,6 +18,66 @@ a fully-functionable Debian repository, which
 [`apt`](https://en.wikipedia.org/wiki/APT_(software)) 
 will perfectly understand.
 
+## Debian repository structure
+
+Debian repository [has](https://www.debian.org/doc/manuals/repository-howto/repository-howto#id442666) 
+the following structure:
+```
+(repository root) 
+| 
++-dists
+  | 
+  |-my_repo
+  | |-main
+  | | |-binary-*
+  | | +-source 
+  | |-contrib
+  | | |-binary-*
+  | | +-source 
+  | +-non-free
+  |   |-binary-*
+  |   +-source
+  |
+  |-testing 
+  | ...
+  |
+  +-unstable 
+    | ...
+    |
+```
+`main` contains free package, `non-free` - non-free ones and `contrib` contains free packages which 
+depend on non-free ones. `testing` and `unstable` have the same structure as `main` or `testing`.  
+
+`*` in `binary-*` stands for the architecture, currently Debian [supports](https://wiki.debian.org/SupportedArchitectures) 
+more than 20 of them. Each `binary-*` directory contains a `Packages.gz` index file. Index files contain 
+paths to the individual packages, so packages can be located anywhere in the repository.
+
+## Packages index file
+
+Packages index files are called [Binary Packages Indices](https://wiki.debian.org/DebianRepository/Format#A.22Packages.22_Indices) 
+and contains information about packages in paragraphs, each paragraph has the format defined by 
+[Debian Policy](https://www.debian.org/doc/debian-policy/#s-binarycontrolfiles) 
+and several other fields such as `Filename`, `Size` and checksums, here is an example of one paragraph 
+(information about one package):
+
+```text
+Package: aglfn
+Version: 1.7-3
+Architecture: all
+Maintainer: Debian Fonts Task Force <pkg-fonts-devel@lists.alioth.debian.org>
+Installed-Size: 138
+Filename: main/aglfn_1.7-3_all.deb
+Size: 29238
+MD5sum: cee972bb5e9f9151239e146743a40c9c
+SHA1: d404261883ae7bd5a3e35abca99b1256ae070ed5
+SHA256: 421a5c6432cb7f9c398aa5c89676884e421ad0fde6bf13d0cadee178bf0daf7c
+Section: fonts
+Priority: extra
+Homepage: http://sourceforge.net/adobe/aglfn/
+Description: Adobe Glyph List For New Fonts
+ AGL (Adobe Glyph List) maps glyph names to Unicode values ...
+```
+ 
 ## How to contribute
 
 Fork repository, make changes, send us a pull request. We will review
