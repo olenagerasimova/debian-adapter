@@ -57,7 +57,8 @@ paths to the individual packages, so packages can be located anywhere in the rep
 Packages index files are called [Binary Packages Indices](https://wiki.debian.org/DebianRepository/Format#A.22Packages.22_Indices) 
 and contains information about packages in paragraphs, each paragraph has the format defined by 
 [Debian Policy](https://www.debian.org/doc/debian-policy/#s-binarycontrolfiles) 
-and several other fields such as `Filename`, `Size` and checksums, here is an example:
+and several other fields such as `Filename`, `Size` and checksums, here is an example of one paragraph 
+(information about one package):
 
 ```text
 Package: aglfn
