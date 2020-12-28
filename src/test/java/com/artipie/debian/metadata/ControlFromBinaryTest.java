@@ -23,13 +23,10 @@
  */
 package com.artipie.debian.metadata;
 
-import com.artipie.asto.fs.FileStorage;
 import com.artipie.asto.test.TestResource;
-import java.nio.file.Path;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.IsEqual;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Test for {@link Control.FromBinary}.
@@ -38,11 +35,9 @@ import org.junit.jupiter.api.io.TempDir;
 class ControlFromBinaryTest {
 
     @Test
-    void readsData(@TempDir final Path temp) {
-        final String name = "aglfn_1.7-3_all.deb";
-        new TestResource(name).saveTo(new FileStorage(temp));
+    void readsData() {
         MatcherAssert.assertThat(
-            new Control.FromBinary(temp.resolve(name)).asString(),
+            new Control.FromBinary(new TestResource("aglfn_1.7-3_all.deb").asBytes()).asString(),
             new IsEqual<>(
                 String.join(
                     "\n",

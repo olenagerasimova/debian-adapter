@@ -24,10 +24,9 @@
 package com.artipie.debian.metadata;
 
 import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveInputStream;
@@ -63,25 +62,25 @@ public interface Control {
         private static final String FILE_NAME = "control";
 
         /**
-         * Path to debian binary package.
+         * Debian binary package bytes.
          */
-        private final Path pkg;
+        private final byte[] pkg;
 
         /**
          * Ctor.
          *
          * @param pkg Debian binary package
          */
-        public FromBinary(final Path pkg) {
+        public FromBinary(final byte[] pkg) {
             this.pkg = pkg;
         }
 
         @Override
-        @SuppressWarnings({"PMD.AssignmentInOperand", "PMD.CyclomaticComplexity"})
+        @SuppressWarnings("PMD.AssignmentInOperand")
         public String asString() {
             try (
                 ArchiveInputStream input = new ArchiveStreamFactory().createArchiveInputStream(
-                    new BufferedInputStream(Files.newInputStream(this.pkg))
+                    new BufferedInputStream(new ByteArrayInputStream(this.pkg))
                 )
             ) {
                 ArchiveEntry first;
@@ -90,25 +89,37 @@ public interface Control {
                         continue;
                     }
                     if (first.getName().startsWith(FromBinary.FILE_NAME)) {
-                        try (
-                            GzipCompressorInputStream internal =
-                                new GzipCompressorInputStream(input);
-                            TarArchiveInputStream tar = new TarArchiveInputStream(internal)
-                        ) {
-                            TarArchiveEntry second;
-                            while ((second = (TarArchiveEntry) tar.getNextEntry()) != null) {
-                                if (second.isFile()
-                                    && second.getName().endsWith(FromBinary.FILE_NAME)) {
-                                    return IOUtils.toString(tar, StandardCharsets.UTF_8);
-                                }
-                            }
-                        }
+                        return FromBinary.unpackTarGz(input);
                     }
                 }
             } catch (final ArchiveException | IOException ex) {
                 throw new IllegalStateException("Failed to obtain package metadata", ex);
             }
-            throw new IllegalStateException("Package metadata not found");
+            throw new IllegalStateException("Archive `control` is not found in the package");
+        }
+
+        /**
+         * Unpacks internal tar gz and reads control file.
+         * @param input Input stream
+         * @return Control file as string
+         * @throws IOException On error
+         */
+        @SuppressWarnings("PMD.AssignmentInOperand")
+        private static String unpackTarGz(final ArchiveInputStream input) throws IOException {
+            try (
+                GzipCompressorInputStream internal = new GzipCompressorInputStream(input);
+                TarArchiveInputStream tar = new TarArchiveInputStream(internal)
+            ) {
+                TarArchiveEntry second;
+                while ((second = (TarArchiveEntry) tar.getNextEntry()) != null) {
+                    if (second.isFile() && second.getName().endsWith(FromBinary.FILE_NAME)) {
+                        return IOUtils.toString(tar, StandardCharsets.UTF_8);
+                    }
+                }
+            }
+            throw new IllegalStateException(
+                "File `control` is not found in `control` archive"
+            );
         }
     }
 }
