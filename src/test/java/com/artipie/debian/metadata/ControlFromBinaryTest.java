@@ -74,6 +74,7 @@ class ControlFromBinaryTest {
             new IsEqual<>(
                 String.join(
                     "\n",
+                    // @checkstyle LineLengthCheck (50 lines)
                     "Package: pspp",
                     "Version: 1.2.0-3",
                     "Architecture: amd64",

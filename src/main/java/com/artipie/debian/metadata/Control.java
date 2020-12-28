@@ -91,7 +91,7 @@ public interface Control {
                         continue;
                     }
                     if (entry.getName().startsWith(FromBinary.FILE_NAME)) {
-                        return FromBinary.unpackTar(FromBinary.stream(input,entry.getName()));
+                        return FromBinary.unpackTar(FromBinary.stream(input, entry.getName()));
                     }
                 }
             } catch (final ArchiveException | IOException ex) {
@@ -103,8 +103,10 @@ public interface Control {
         /**
          * Returns correct (depending on archive type) input stream for archive entry input stream.
          *
-         * @param input Archived input
+         * @param input Archived entry input
+         * @param name Archived entry name
          * @return Corresponding InputStream instance
+         * @throws IOException On error
          */
         private static InputStream stream(final ArchiveInputStream input, final String name)
             throws IOException {
