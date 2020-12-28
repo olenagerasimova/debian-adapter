@@ -26,6 +26,7 @@ package com.artipie.debian.metadata;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveException;
@@ -34,6 +35,7 @@ import org.apache.commons.compress.archivers.ArchiveStreamFactory;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
+import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
 import org.apache.commons.io.IOUtils;
 
 /**
@@ -83,13 +85,13 @@ public interface Control {
                     new BufferedInputStream(new ByteArrayInputStream(this.pkg))
                 )
             ) {
-                ArchiveEntry first;
-                while ((first = input.getNextEntry()) != null) {
-                    if (!input.canReadEntryData(first)) {
+                ArchiveEntry entry;
+                while ((entry = input.getNextEntry()) != null) {
+                    if (!input.canReadEntryData(entry)) {
                         continue;
                     }
-                    if (first.getName().startsWith(FromBinary.FILE_NAME)) {
-                        return FromBinary.unpackTarGz(input);
+                    if (entry.getName().startsWith(FromBinary.FILE_NAME)) {
+                        return FromBinary.unpackTar(FromBinary.stream(input,entry.getName()));
                     }
                 }
             } catch (final ArchiveException | IOException ex) {
@@ -99,23 +101,42 @@ public interface Control {
         }
 
         /**
-         * Unpacks internal tar gz and reads control file.
+         * Returns correct (depending on archive type) input stream for archive entry input stream.
+         *
+         * @param input Archived input
+         * @return Corresponding InputStream instance
+         */
+        private static InputStream stream(final ArchiveInputStream input, final String name)
+            throws IOException {
+            final InputStream res;
+            if (name.endsWith("gz")) {
+                res = new GzipCompressorInputStream(input);
+            } else if (name.endsWith("xz")) {
+                res = new XZCompressorInputStream(input);
+            } else {
+                throw new IllegalStateException("Unsupported archive type");
+            }
+            return res;
+        }
+
+        /**
+         * Unpacks internal tar and reads control file.
+         *
          * @param input Input stream
          * @return Control file as string
          * @throws IOException On error
          */
         @SuppressWarnings("PMD.AssignmentInOperand")
-        private static String unpackTarGz(final ArchiveInputStream input) throws IOException {
-            try (
-                GzipCompressorInputStream internal = new GzipCompressorInputStream(input);
-                TarArchiveInputStream tar = new TarArchiveInputStream(internal)
-            ) {
-                TarArchiveEntry second;
-                while ((second = (TarArchiveEntry) tar.getNextEntry()) != null) {
-                    if (second.isFile() && second.getName().endsWith(FromBinary.FILE_NAME)) {
+        private static String unpackTar(final InputStream input) throws IOException {
+            try (TarArchiveInputStream tar = new TarArchiveInputStream(input)) {
+                TarArchiveEntry entry;
+                while ((entry = (TarArchiveEntry) tar.getNextEntry()) != null) {
+                    if (entry.isFile() && entry.getName().endsWith(FromBinary.FILE_NAME)) {
                         return IOUtils.toString(tar, StandardCharsets.UTF_8);
                     }
                 }
+            } finally {
+                input.close();
             }
             throw new IllegalStateException(
                 "File `control` is not found in `control` archive"
