@@ -24,11 +24,8 @@
 package com.artipie.debian.metadata;
 
 import java.util.NoSuchElementException;
-import org.cactoos.list.ListOf;
 import org.hamcrest.MatcherAssert;
-import org.hamcrest.collection.IsArrayContaining;
-import org.hamcrest.collection.IsArrayContainingInAnyOrder;
-import org.hamcrest.core.IsEqual;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -52,7 +49,7 @@ class ControlFieldTest {
                     "Section: fonts"
                 )
             ),
-            new IsArrayContaining<String>(new IsEqual<>("all"))
+            Matchers.contains("all")
         );
     }
 
@@ -67,11 +64,7 @@ class ControlFieldTest {
                     "Architecture: amd64 amd32"
                 )
             ),
-            new IsArrayContainingInAnyOrder<>(
-                new ListOf<org.hamcrest.Matcher<? super String>>(
-                    new IsEqual<>("amd64"), new IsEqual<>("amd32")
-                )
-            )
+            Matchers.contains("amd64", "amd32")
         );
     }
 

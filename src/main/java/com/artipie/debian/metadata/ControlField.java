@@ -23,8 +23,10 @@
  */
 package com.artipie.debian.metadata;
 
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.stream.Stream;
+import org.cactoos.list.ListOf;
 
 /**
  * Control file field.
@@ -38,13 +40,13 @@ public interface ControlField {
      * @param control Control file as string
      * @return Values of the field
      */
-    String[] value(String control);
+    List<String> value(String control);
 
     /**
-     * Wrap for {@link ControlField}.
+     * {@link ControlField} by field name.
      * @since 0.1
      */
-    abstract class Wrap implements ControlField {
+    abstract class ByName implements ControlField {
 
         /**
          * Field name.
@@ -55,17 +57,18 @@ public interface ControlField {
          * Ctor.
          * @param field Field
          */
-        protected Wrap(final String field) {
+        protected ByName(final String field) {
             this.field = field;
         }
 
         @Override
-        public String[] value(final String control) {
+        public List<String> value(final String control) {
             return Stream.of(control.split("\n")).filter(item -> item.startsWith(this.field))
                 .findFirst()
                 //@checkstyle StringLiteralsConcatenationCheck (1 line)
                 .map(item -> item.substring(item.indexOf(":") + 2))
                 .map(res -> res.split(" "))
+                .map(ListOf::new)
                 .orElseThrow(
                     () -> new NoSuchElementException(
                         String.format("Field %s not found in control", this.field)
@@ -78,7 +81,7 @@ public interface ControlField {
      * Architecture.
      * @since 0.1
      */
-    final class Architecture extends Wrap {
+    final class Architecture extends ByName {
 
         /**
          * Ctor.
