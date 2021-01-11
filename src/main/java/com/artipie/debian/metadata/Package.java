@@ -34,6 +34,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
@@ -74,21 +75,33 @@ public interface Package {
 
         @Override
         public CompletionStage<Void> add(final String item, final Key index) {
-            return this.asto.value(index).thenCompose(
-                content -> new PublisherAs(content).bytes()
-            ).thenApply(bytes -> Simple.unpackAppendPack(bytes, item)).thenCompose(
-                bytes -> this.asto.save(index, new Content.From(bytes))
-            );
+            return this.asto.exists(index).thenCompose(
+                exists -> {
+                    final CompletionStage<byte[]> res;
+                    if (exists) {
+                        res = this.asto.value(index).thenCompose(
+                            content -> new PublisherAs(content).bytes()
+                        ).thenApply(
+                            bytes -> Simple.unpackAppendCompress(bytes, item)
+                        );
+                    } else {
+                        res = CompletableFuture.completedFuture(
+                            Simple.compress(item.getBytes(StandardCharsets.UTF_8))
+                        );
+                    }
+                    return res;
+                }
+            ).thenCompose(res -> this.asto.save(index, new Content.From(res)));
         }
 
         /**
-         * Unpacks Packages index file, appends new item and packs the file.
+         * Unpacks Packages index file, appends new item and compress the file.
          * @param content Packages file bytes
          * @param item Item to add
          * @return Packages file bytes with added item
          */
         @SuppressWarnings("PMD.AssignmentInOperand")
-        private static byte[] unpackAppendPack(final byte[] content, final String item) {
+        private static byte[] unpackAppendCompress(final byte[] content, final String item) {
             try (
                 GzipCompressorInputStream gcis = new GzipCompressorInputStream(
                     new BufferedInputStream(new ByteArrayInputStream(content))
@@ -103,15 +116,26 @@ public interface Package {
                 }
                 out.write("\n\n".getBytes(StandardCharsets.UTF_8));
                 out.write(item.getBytes(StandardCharsets.UTF_8));
-                final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                try (GzipCompressorOutputStream gcos =
-                    new GzipCompressorOutputStream(new BufferedOutputStream(baos))) {
-                    gcos.write(out.toByteArray());
-                }
-                return baos.toByteArray();
+                return Simple.compress(out.toByteArray());
             } catch (final IOException ex) {
                 throw new UncheckedIOException(ex);
             }
+        }
+
+        /**
+         * Compress bytes in gz format.
+         * @param bytes Bytes to pack
+         * @return Compressed bytes
+         */
+        private static byte[] compress(final byte[] bytes) {
+            final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            try (GzipCompressorOutputStream gcos =
+                new GzipCompressorOutputStream(new BufferedOutputStream(baos))) {
+                gcos.write(bytes);
+            } catch (final IOException ex) {
+                throw new UncheckedIOException(ex);
+            }
+            return baos.toByteArray();
         }
 
     }

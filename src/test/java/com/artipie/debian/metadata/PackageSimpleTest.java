@@ -52,21 +52,8 @@ class PackageSimpleTest {
         final Storage asto = new InMemoryStorage();
         final String key = "Packages.gz";
         new TestResource(key).saveTo(asto);
-        new Package.Simple(asto).add(
-            String.join(
-                "\n",
-                "Package: abc",
-                "Version: 0.1",
-                "Architecture: all",
-                "Maintainer: Task Force",
-                "Installed-Size: 130",
-                "Section: The Force",
-                "Filename: some/debian/package.deb",
-                "Size: 23",
-                "MD5sum: e99a18c428cb38d5f260853678922e03"
-            ),
-            new Key.From(key)
-        ).toCompletableFuture().join();
+        new Package.Simple(asto).add(this.packageInfo(), new Key.From(key))
+            .toCompletableFuture().join();
         try (
             GzipCompressorInputStream gcis = new GzipCompressorInputStream(
                 new BufferedInputStream(
@@ -80,9 +67,8 @@ class PackageSimpleTest {
             while (-1 != (cnt = gcis.read(buf))) {
                 out.write(buf, 0, cnt);
             }
-            final String actual = out.toString();
             MatcherAssert.assertThat(
-                actual,
+                out.toString(),
                 new StringContainsInOrder(
                     new ListOf<String>(
                         "Package: aglfn",
@@ -92,6 +78,51 @@ class PackageSimpleTest {
                 )
             );
         }
+    }
+
+    @Test
+    void addsPackagesItemWhenIndexIsNew() throws IOException {
+        final Storage asto = new InMemoryStorage();
+        final String key = "Packages.gz";
+        new Package.Simple(asto).add(this.packageInfo(), new Key.From(key))
+            .toCompletableFuture().join();
+        try (
+            GzipCompressorInputStream gcis = new GzipCompressorInputStream(
+                new BufferedInputStream(
+                    new ByteArrayInputStream(new BlockingStorage(asto).value(new Key.From(key)))
+                )
+            )
+        ) {
+            final ByteArrayOutputStream out = new ByteArrayOutputStream();
+            final byte[] buf = new byte[1024];
+            int cnt;
+            while (-1 != (cnt = gcis.read(buf))) {
+                out.write(buf, 0, cnt);
+            }
+            MatcherAssert.assertThat(
+                out.toString(),
+                new StringContainsInOrder(
+                    new ListOf<String>(
+                        "Package: abc"
+                    )
+                )
+            );
+        }
+    }
+
+    private String packageInfo() {
+        return String.join(
+            "\n",
+            "Package: abc",
+            "Version: 0.1",
+            "Architecture: all",
+            "Maintainer: Task Force",
+            "Installed-Size: 130",
+            "Section: The Force",
+            "Filename: some/debian/package.deb",
+            "Size: 23",
+            "MD5sum: e99a18c428cb38d5f260853678922e03"
+        );
     }
 
 }
