@@ -36,6 +36,7 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.cactoos.list.ListOf;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.text.StringContainsInOrder;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -47,67 +48,50 @@ import org.junit.jupiter.api.Test;
 @SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.AssignmentInOperand"})
 class PackageSimpleTest {
 
+    /**
+     * Packages file index key.
+     */
+    private static final String KEY = "Packages.gz";
+
+    /**
+     * Test storage.
+     */
+    private Storage asto;
+
+    @BeforeEach
+    void init() {
+        this.asto = new InMemoryStorage();
+    }
+
     @Test
     void addsPackagesItem() throws IOException {
-        final Storage asto = new InMemoryStorage();
-        final String key = "Packages.gz";
-        new TestResource(key).saveTo(asto);
-        new Package.Simple(asto).add(this.packageInfo(), new Key.From(key))
+        new TestResource(PackageSimpleTest.KEY).saveTo(this.asto);
+        new Package.Simple(this.asto).add(this.packageInfo(), new Key.From(PackageSimpleTest.KEY))
             .toCompletableFuture().join();
-        try (
-            GzipCompressorInputStream gcis = new GzipCompressorInputStream(
-                new BufferedInputStream(
-                    new ByteArrayInputStream(new BlockingStorage(asto).value(new Key.From(key)))
+        MatcherAssert.assertThat(
+            this.archiveAsString(),
+            new StringContainsInOrder(
+                new ListOf<String>(
+                    "Package: aglfn",
+                    "Package: pspp",
+                    "Package: abc"
                 )
             )
-        ) {
-            final ByteArrayOutputStream out = new ByteArrayOutputStream();
-            final byte[] buf = new byte[1024];
-            int cnt;
-            while (-1 != (cnt = gcis.read(buf))) {
-                out.write(buf, 0, cnt);
-            }
-            MatcherAssert.assertThat(
-                out.toString(),
-                new StringContainsInOrder(
-                    new ListOf<String>(
-                        "Package: aglfn",
-                        "Package: pspp",
-                        "Package: abc"
-                    )
-                )
-            );
-        }
+        );
     }
 
     @Test
     void addsPackagesItemWhenIndexIsNew() throws IOException {
-        final Storage asto = new InMemoryStorage();
-        final String key = "Packages.gz";
-        new Package.Simple(asto).add(this.packageInfo(), new Key.From(key))
+        new Package.Simple(this.asto).add(this.packageInfo(), new Key.From(PackageSimpleTest.KEY))
             .toCompletableFuture().join();
-        try (
-            GzipCompressorInputStream gcis = new GzipCompressorInputStream(
-                new BufferedInputStream(
-                    new ByteArrayInputStream(new BlockingStorage(asto).value(new Key.From(key)))
+        MatcherAssert.assertThat(
+            this.archiveAsString(),
+            new StringContainsInOrder(
+                new ListOf<String>(
+                    "Package: abc"
                 )
             )
-        ) {
-            final ByteArrayOutputStream out = new ByteArrayOutputStream();
-            final byte[] buf = new byte[1024];
-            int cnt;
-            while (-1 != (cnt = gcis.read(buf))) {
-                out.write(buf, 0, cnt);
-            }
-            MatcherAssert.assertThat(
-                out.toString(),
-                new StringContainsInOrder(
-                    new ListOf<String>(
-                        "Package: abc"
-                    )
-                )
-            );
-        }
+        );
     }
 
     private String packageInfo() {
@@ -123,6 +107,26 @@ class PackageSimpleTest {
             "Size: 23",
             "MD5sum: e99a18c428cb38d5f260853678922e03"
         );
+    }
+
+    private String archiveAsString() throws IOException {
+        try (
+            GzipCompressorInputStream gcis = new GzipCompressorInputStream(
+                new BufferedInputStream(
+                    new ByteArrayInputStream(
+                        new BlockingStorage(this.asto).value(new Key.From(PackageSimpleTest.KEY))
+                    )
+                )
+            )
+        ) {
+            final ByteArrayOutputStream out = new ByteArrayOutputStream();
+            final byte[] buf = new byte[1024];
+            int cnt;
+            while (-1 != (cnt = gcis.read(buf))) {
+                out.write(buf, 0, cnt);
+            }
+            return out.toString();
+        }
     }
 
 }
