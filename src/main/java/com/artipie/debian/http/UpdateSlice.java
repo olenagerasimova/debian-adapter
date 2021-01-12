@@ -51,7 +51,7 @@ import org.reactivestreams.Publisher;
  * @since 0.1
  * @checkstyle ClassDataAbstractionCouplingCheck (500 lines)
  */
-public final class DebianUpdateSlice implements Slice {
+public final class UpdateSlice implements Slice {
 
     /**
      * Abstract storage.
@@ -68,7 +68,7 @@ public final class DebianUpdateSlice implements Slice {
      * @param asto Abstract storage
      * @param reponame Repository name
      */
-    public DebianUpdateSlice(final Storage asto, final String reponame) {
+    public UpdateSlice(final Storage asto, final String reponame) {
         this.asto = asto;
         this.reponame = reponame;
     }

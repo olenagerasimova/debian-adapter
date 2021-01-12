@@ -39,18 +39,18 @@ import org.hamcrest.core.IsEqual;
 import org.junit.jupiter.api.Test;
 
 /**
- * Test for {@link DebianUpdateSlice}.
+ * Test for {@link UpdateSlice}.
  * @since 0.1
  * @checkstyle ClassDataAbstractionCouplingCheck (500 lines)
  */
-class DebianUpdateSliceTest {
+class UpdateSliceTest {
 
     @Test
     void uploadsAndUpdatesIndex() {
         final Storage asto = new InMemoryStorage();
         MatcherAssert.assertThat(
             "Response is OK",
-            new DebianUpdateSlice(asto, "my_repo"),
+            new UpdateSlice(asto, "my_repo"),
             new SliceHasResponse(
                 new RsHasStatus(RsStatus.OK),
                 new RequestLine(RqMethod.PUT, "/main/aglfn_1.7-3_all.deb"),
