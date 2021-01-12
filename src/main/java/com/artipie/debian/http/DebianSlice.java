@@ -82,7 +82,7 @@ public final class DebianSlice extends Slice.Wrap {
                     new BasicAuthSlice(
                         new UpdateSlice(storage, reponame),
                         users,
-                        new Permission.ByName(perms, Action.Standard.READ)
+                        new Permission.ByName(perms, Action.Standard.WRITE)
                     )
                 ),
                 new RtRulePath(
