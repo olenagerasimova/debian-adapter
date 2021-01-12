@@ -86,7 +86,7 @@ public interface ControlField {
         /**
          * Ctor.
          */
-        protected Architecture() {
+        public Architecture() {
             super("Architecture");
         }
     }
