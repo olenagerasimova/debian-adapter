@@ -42,15 +42,17 @@ import com.artipie.http.slice.SliceSimple;
 /**
  * Debian slice.
  * @since 0.1
+ * @checkstyle ClassDataAbstractionCouplingCheck (500 lines)
  */
 public final class DebianSlice extends Slice.Wrap {
 
     /**
      * Ctor.
      * @param storage Storage
+     * @param reponame Repository name
      */
-    public DebianSlice(final Storage storage) {
-        this(storage, Permissions.FREE, Authentication.ANONYMOUS);
+    public DebianSlice(final Storage storage, final String reponame) {
+        this(storage, Permissions.FREE, Authentication.ANONYMOUS, reponame);
     }
 
     /**
@@ -58,9 +60,11 @@ public final class DebianSlice extends Slice.Wrap {
      * @param storage Storage
      * @param perms Permissions
      * @param users Users
+     * @param reponame Repository name
+     * @checkstyle ParameterNumberCheck (5 lines)
      */
     public DebianSlice(final Storage storage, final Permissions perms,
-        final Authentication users) {
+        final Authentication users, final String reponame) {
         super(
             new SliceRoute(
                 new RtRulePath(
@@ -69,6 +73,16 @@ public final class DebianSlice extends Slice.Wrap {
                         new SliceDownload(storage),
                         users,
                         new Permission.ByName(perms, Action.Standard.READ)
+                    )
+                ),
+                new RtRulePath(
+                    new RtRule.Any(
+                        new ByMethodsRule(RqMethod.PUT), new ByMethodsRule(RqMethod.POST)
+                    ),
+                    new BasicAuthSlice(
+                        new UpdateSlice(storage, reponame),
+                        users,
+                        new Permission.ByName(perms, Action.Standard.WRITE)
                     )
                 ),
                 new RtRulePath(

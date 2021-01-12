@@ -86,7 +86,7 @@ public final class DebianSliceITCase {
         final Storage storage = new InMemoryStorage();
         this.server = new VertxSliceServer(
             DebianSliceITCase.VERTX,
-            new LoggingSlice(new DebianSlice(storage))
+            new LoggingSlice(new DebianSlice(storage, "my_repo"))
         );
         new TestResource("pspp_1.2.0-3_amd64.deb")
             .saveTo(storage, new Key.From("main", "pspp_1.2.0-3_amd64.deb"));
