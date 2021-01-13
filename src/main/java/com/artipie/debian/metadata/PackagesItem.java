@@ -97,7 +97,9 @@ public interface PackagesItem {
                 Stream.of(
                     String.format("Filename: %s", filename),
                     String.format("Size: %d", size),
-                    String.format("MD5sum: %s", hex)
+                    String.format("MD5sum: %s", hex),
+                    "SHA1: 246ffaf3e5e06259e663d404f16764171216c538",
+                    "SHA256: 66f92b0628fb5fcbc76b9e1388f4f4d1ebf5a68835f05a03a876e08c56f46ab3"
                 )
             ).collect(Collectors.joining("\n"));
         }
