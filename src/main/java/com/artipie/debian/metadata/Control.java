@@ -133,7 +133,8 @@ public interface Control {
             try (TarArchiveInputStream tar = new TarArchiveInputStream(input)) {
                 TarArchiveEntry entry;
                 while ((entry = (TarArchiveEntry) tar.getNextEntry()) != null) {
-                    if (entry.isFile() && entry.getName().endsWith(FromBinary.FILE_NAME)) {
+                    if (entry.isFile()
+                        && entry.getName().equals(String.format("./%s", FromBinary.FILE_NAME))) {
                         return IOUtils.toString(tar, StandardCharsets.UTF_8);
                     }
                 }
