@@ -70,8 +70,8 @@ class PackagesItemTest {
                     "Filename: some/debian/package.deb",
                     "Size: 6",
                     "MD5sum: e99a18c428cb38d5f260853678922e03",
-                    "SHA1: 246ffaf3e5e06259e663d404f16764171216c538",
-                    "SHA256: 66f92b0628fb5fcbc76b9e1388f4f4d1ebf5a68835f05a03a876e08c56f46ab3"
+                    "SHA1: 6367c48dd193d56ea7b0baad25b19455e529f5ee",
+                    "SHA256: 6ca13d52ca70c883e0f0bb101e425a89e8624de51db2d2392593af6a84118090"
                 )
             )
         );

@@ -66,40 +66,72 @@ public interface PackagesItem {
 
         @Override
         public CompletionStage<String> format(final String control, final Key deb) {
-            return this.asto.value(deb).thenCompose(
-                val -> new ContentDigest(val, Digests.MD5).hex().thenApply(
-                    hex -> Asto.addSizeAndFilename(
-                        val.size().orElseThrow(
-                            () -> new IllegalStateException("Content size unknown")
-                        ),
-                        deb.string(), hex, control
-                    )
-                ).thenApply(
-                    Asto::sort
+            return this.asto.value(deb).thenApply(
+                val -> Asto.addSizeAndFilename(
+                    val.size().orElseThrow(
+                        () -> new IllegalStateException("Content size unknown")
+                    ), deb.string(), control
                 )
+            )
+            .thenCompose(
+                res -> this.digests(deb, Digests.MD5)
+                    .thenApply(hex -> Asto.addDigest(res, "MD5sum", hex))
+            )
+            .thenCompose(
+                res -> this.digests(deb, Digests.SHA1)
+                    .thenApply(hex -> Asto.addDigest(res, "SHA1", hex))
+            )
+            .thenCompose(
+                res -> this.digests(deb, Digests.SHA256)
+                    .thenApply(hex -> Asto.addDigest(res, "SHA256", hex))
+            )
+            .thenApply(Asto::sort);
+        }
+
+        /**
+         * Calculates digest for the given algorithm.
+         * @param deb Debian package key
+         * @param alg Algorithm
+         * @return Digest hex
+         */
+        private CompletionStage<String> digests(final Key deb, final Digests alg) {
+            return this.asto.value(deb).thenCompose(
+                val -> new ContentDigest(val, alg).hex()
             );
         }
 
         /**
-         * Adds size, filename and md5 hex to the control.
+         * Adds digest to control.
+         * @param control Control to append info to
+         * @param alg Algorithm
+         * @param hex Hex
+         * @return Control with digest
+         */
+        private static String addDigest(final String control, final String alg, final String hex) {
+            return Stream.concat(
+                Stream.of(control.split("\n")),
+                Stream.of(
+                    String.format("%s: %s", alg, hex)
+                )
+            ).collect(Collectors.joining("\n"));
+        }
+
+        /**
+         * Adds size and filename to the control.
          * @param size Package size
          * @param filename Filename
-         * @param hex Md5 hex
          * @param control Control file
          * @return Control with size and file name
          * @checkstyle ParameterNumberCheck (5 lines)
          */
         private static String addSizeAndFilename(
-            final long size, final String filename, final String hex, final String control
+            final long size, final String filename, final String control
         ) {
             return Stream.concat(
                 Stream.of(control.split("\n")),
                 Stream.of(
                     String.format("Filename: %s", filename),
-                    String.format("Size: %d", size),
-                    String.format("MD5sum: %s", hex),
-                    "SHA1: 246ffaf3e5e06259e663d404f16764171216c538",
-                    "SHA256: 66f92b0628fb5fcbc76b9e1388f4f4d1ebf5a68835f05a03a876e08c56f46ab3"
+                    String.format("Size: %d", size)
                 )
             ).collect(Collectors.joining("\n"));
         }
