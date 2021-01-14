@@ -112,20 +112,7 @@ public final class DebianAuthSliceITCase {
     @Test
     void pushAndInstallWorks() throws Exception {
         this.init((user, action) -> true);
-        final HttpURLConnection con = (HttpURLConnection) new URL(
-            String.format("http://localhost:%d/main/aglfn_1.7-3_amd64.deb", this.port)
-        ).openConnection();
-        con.setDoOutput(true);
-        con.addRequestProperty(
-            "Authorization",
-            String.format(
-                "Basic %s",
-                new String(
-                    Base64.encodeBase64(DebianAuthSliceITCase.AUTH.getBytes(StandardCharsets.UTF_8))
-                )
-            )
-        );
-        con.setRequestMethod("PUT");
+        final HttpURLConnection con = this.getConnection(DebianAuthSliceITCase.AUTH, "PUT");
         final DataOutputStream out = new DataOutputStream(con.getOutputStream());
         out.write(new TestResource("aglfn_1.7-3_amd64.deb").asBytes());
         out.close();
@@ -148,23 +135,9 @@ public final class DebianAuthSliceITCase {
     @ValueSource(strings = {"GET", "PUT"})
     void returnsUnauthorizedWhenUserIsUnknown(final String method) throws Exception {
         this.init((user, action) -> user.name().equals(DebianAuthSliceITCase.USER));
-        final HttpURLConnection con = (HttpURLConnection) new URL(
-            String.format("http://localhost:%d/main/aglfn_1.7-3_amd64.deb", this.port)
-        ).openConnection();
-        con.setDoOutput(true);
-        con.addRequestProperty(
-            "Authorization",
-            String.format(
-                "Basic %s",
-                new String(
-                    Base64.encodeBase64("mark:abc".getBytes(StandardCharsets.UTF_8))
-                )
-            )
-        );
-        con.setRequestMethod(method);
         MatcherAssert.assertThat(
             "Response is UNAUTHORIZED",
-            con.getResponseCode(),
+            this.getConnection("mark:abc", method).getResponseCode(),
             new IsEqual<>(Integer.parseInt(RsStatus.UNAUTHORIZED.code()))
         );
     }
@@ -176,6 +149,21 @@ public final class DebianAuthSliceITCase {
             (user, action) -> user.name().equals(DebianAuthSliceITCase.USER)
                 && action.equals("fake")
         );
+        MatcherAssert.assertThat(
+            "Response is FORBIDDEN",
+            this.getConnection(DebianAuthSliceITCase.AUTH, method).getResponseCode(),
+            new IsEqual<>(Integer.parseInt(RsStatus.FORBIDDEN.code()))
+        );
+    }
+
+    @AfterEach
+    void stop() {
+        this.server.stop();
+        this.cntn.stop();
+    }
+
+    private HttpURLConnection getConnection(final String auth, final String method)
+        throws IOException {
         final HttpURLConnection con = (HttpURLConnection) new URL(
             String.format("http://localhost:%d/main/aglfn_1.7-3_amd64.deb", this.port)
         ).openConnection();
@@ -185,22 +173,12 @@ public final class DebianAuthSliceITCase {
             String.format(
                 "Basic %s",
                 new String(
-                    Base64.encodeBase64(DebianAuthSliceITCase.AUTH.getBytes(StandardCharsets.UTF_8))
+                    Base64.encodeBase64(auth.getBytes(StandardCharsets.UTF_8))
                 )
             )
         );
         con.setRequestMethod(method);
-        MatcherAssert.assertThat(
-            "Response is FORBIDDEN",
-            con.getResponseCode(),
-            new IsEqual<>(Integer.parseInt(RsStatus.FORBIDDEN.code()))
-        );
-    }
-
-    @AfterEach
-    void stop() {
-        this.server.stop();
-        this.cntn.stop();
+        return con;
     }
 
     private void init(final Permissions permissions) throws IOException, InterruptedException {
