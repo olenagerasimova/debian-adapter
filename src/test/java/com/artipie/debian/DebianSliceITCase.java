@@ -128,7 +128,7 @@ public final class DebianSliceITCase {
 
     @Test
     void searchWorks() throws Exception {
-        copyPackage("pspp_1.2.0-3_amd64.deb");
+        this.copyPackage("pspp_1.2.0-3_amd64.deb");
         this.cntn.execInContainer("apt-get", "update");
         MatcherAssert.assertThat(
             this.exec("apt-cache", "search", "pspp"),
@@ -138,7 +138,7 @@ public final class DebianSliceITCase {
 
     @Test
     void installWorks() throws Exception {
-        copyPackage("aglfn_1.7-3_amd64.deb");
+        this.copyPackage("aglfn_1.7-3_amd64.deb");
         this.cntn.execInContainer("apt-get", "update");
         MatcherAssert.assertThat(
             "Package was downloaded and unpacked",
@@ -190,16 +190,16 @@ public final class DebianSliceITCase {
         );
     }
 
-    private void copyPackage(String s) {
-        new TestResource(s).saveTo(this.storage, new Key.From("main", s));
-        new TestResource("Packages.gz")
-            .saveTo(this.storage, new Key.From("dists/artipie/main/binary-amd64/Packages.gz"));
-    }
-
     @AfterEach
     void stop() {
         this.server.stop();
         this.cntn.stop();
+    }
+
+    private void copyPackage(final String pkg) {
+        new TestResource(pkg).saveTo(this.storage, new Key.From("main", pkg));
+        new TestResource("Packages.gz")
+            .saveTo(this.storage, new Key.From("dists/artipie/main/binary-amd64/Packages.gz"));
     }
 
     private String exec(final String... command) throws Exception {
