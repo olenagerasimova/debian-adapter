@@ -52,6 +52,29 @@ depend on non-free ones. `testing` and `unstable` have the same structure as `ma
 more than 20 of them. Each `binary-*` directory contains a `Packages.gz` index file. Index files contain 
 paths to the individual packages, so packages can be located anywhere in the repository.
 
+File `/dists/my-repo/Release` (or gpg-signed `/dists/my-repo/InRelease` file) [contains](https://wiki.debian.org/DebianRepository/Format#A.22Release.22_files) 
+general information about the repository and list of the checksums and paths to the Packages indexes.
+
+## Release files 
+Release files contain [information](https://wiki.debian.org/SupportedArchitectures) about distribution 
+and checksums for the indexes, they are located in the repository root `/dists/my-repo/Release`. 
+Here is the example with minimal fields set:
+
+```text
+Codename: artipie #Repository name
+Architectures: amd64 #Space separated supported architectures set
+Components: main #Repository components set
+Date: Sat, 05 Dec 2020 10:35:57 UTC #Creation date
+SHA256: b91aebb02060c606256206fb6085915f62563a8d78de6ad2873bf171611b5e1c #Checksum of the file
+MD5Sum:
+ 8921ecf7f2fb12bed6bb1125d37c7884 1351 main/amd64/Packages.gz
+```
+
+The most important fields here are `Architectures` (list of the [architectures](https://wiki.debian.org/SupportedArchitectures) 
+this repository supports separated by space) and `Components` (a whitespace separated list of 
+components or areas, in the layout above components are `main`, `contrib` and `non-free`) as they 
+define repository structure. 
+
 ## Packages index file
 
 Packages index files are called [Binary Packages Indices](https://wiki.debian.org/DebianRepository/Format#A.22Packages.22_Indices) 
@@ -77,7 +100,20 @@ Homepage: http://sourceforge.net/adobe/aglfn/
 Description: Adobe Glyph List For New Fonts
  AGL (Adobe Glyph List) maps glyph names to Unicode values ...
 ```
- 
+
+## Debian sources list
+
+Debian repository can be added to the `apt-get` sources list by editing `/etc/apt/sources.list` file, 
+here is the file entry format:
+
+```text
+deb [trusted=yes] http://site.example.com/debian distribution component1 component2 component3
+```
+
+`distribution` is repository name, `my-repo` in the example above, components are set of the 
+repository components `apt` is allowed to work with, parameter `[trusted=yes]` allows to work 
+without gpg-signatures.
+
 ## How to contribute
 
 Fork repository, make changes, send us a pull request. We will review
