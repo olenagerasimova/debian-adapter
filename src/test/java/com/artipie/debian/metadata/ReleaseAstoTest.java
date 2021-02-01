@@ -34,6 +34,8 @@ import com.artipie.http.slice.KeyFromPath;
 import java.util.Optional;
 import org.cactoos.list.ListOf;
 import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
+import org.hamcrest.core.StringContains;
 import org.hamcrest.text.StringContainsInOrder;
 import org.junit.jupiter.api.Test;
 
@@ -62,18 +64,20 @@ class ReleaseAstoTest {
             )
         ).create().toCompletableFuture().join();
         MatcherAssert.assertThat(
-            new PublisherAs(asto.value(new KeyFromPath("dists/abc/Release")).join()).asciiString()
-                .toCompletableFuture().join(),
-            new StringContainsInOrder(
-                new ListOf<String>(
-                    "Codename: abc",
-                    "Architectures: amd intel",
-                    "Components: main",
-                    "Date:",
-                    "SHA256:",
-                    "main/binaty-amd64/Packages.gz",
-                    "main/binaty-intel/Packages.gz"
-                )
+            new PublisherAs(asto.value(new KeyFromPath("dists/abc/Release")).join())
+                .asciiString().toCompletableFuture().join(),
+            Matchers.allOf(
+                new StringContainsInOrder(
+                    new ListOf<String>(
+                        "Codename: abc",
+                        "Architectures: amd intel",
+                        "Components: main",
+                        "Date:",
+                        "SHA256:"
+                    )
+                ),
+                new StringContains("main/binaty-amd64/Packages.gz"),
+                new StringContains("main/binaty-intel/Packages.gz")
             )
         );
     }
