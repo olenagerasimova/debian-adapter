@@ -31,6 +31,7 @@ import com.artipie.debian.http.DebianSlice;
 import com.artipie.http.rs.RsStatus;
 import com.artipie.http.slice.LoggingSlice;
 import com.artipie.vertx.VertxSliceServer;
+import com.jcabi.log.Logger;
 import io.vertx.reactivex.core.Vertx;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -40,7 +41,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import org.cactoos.list.ListOf;
 import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.hamcrest.core.IsEqual;
+import org.hamcrest.core.IsNot;
+import org.hamcrest.core.StringContains;
 import org.hamcrest.text.StringContainsInOrder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -123,30 +127,42 @@ public final class DebianSliceITCase {
     }
 
     @Test
-    void searchWorks() throws IOException, InterruptedException {
-        new TestResource("pspp_1.2.0-3_amd64.deb")
-            .saveTo(this.storage, new Key.From("main", "pspp_1.2.0-3_amd64.deb"));
-        new TestResource("Packages.gz")
-            .saveTo(this.storage, new Key.From("dists/artipie/main/binary-amd64/Packages.gz"));
+    void searchWorks() throws Exception {
+        this.copyPackage("pspp_1.2.0-3_amd64.deb");
         this.cntn.execInContainer("apt-get", "update");
         MatcherAssert.assertThat(
-            this.cntn.execInContainer("apt-cache", "search", "pspp").getStdout(),
+            this.exec("apt-cache", "search", "pspp"),
             new StringContainsInOrder(new ListOf<>("pspp", "Statistical analysis tool"))
         );
     }
 
     @Test
-    void installWorks() throws IOException, InterruptedException {
-        new TestResource("aglfn_1.7-3_amd64.deb")
-            .saveTo(this.storage, new Key.From("main", "aglfn_1.7-3_amd64.deb"));
-        new TestResource("Packages.gz")
-            .saveTo(this.storage, new Key.From("dists/artipie/main/binary-amd64/Packages.gz"));
+    void installWorks() throws Exception {
+        this.copyPackage("aglfn_1.7-3_amd64.deb");
         this.cntn.execInContainer("apt-get", "update");
-        final Container.ExecResult res =
-            this.cntn.execInContainer("apt-get", "install", "-y", "aglfn");
         MatcherAssert.assertThat(
             "Package was downloaded and unpacked",
-            res.getStdout(),
+            this.exec("apt-get", "install", "-y", "aglfn"),
+            new StringContainsInOrder(new ListOf<>("Unpacking aglfn", "Setting up aglfn"))
+        );
+    }
+
+    @Test
+    void installWithInReleaseFileWorks() throws Exception {
+        this.copyPackage("aglfn_1.7-3_amd64.deb");
+        new TestResource("Release")
+            .saveTo(this.storage, new Key.From("dists/artipie/Release"));
+        MatcherAssert.assertThat(
+            "Release file is used on update the world",
+            this.exec("apt-get", "update"),
+            Matchers.allOf(
+                new StringContains("artipie/main amd64 Packages"),
+                new IsNot<>(new StringContains("artipie/main all Packages"))
+            )
+        );
+        MatcherAssert.assertThat(
+            "Package was downloaded and unpacked",
+            this.exec("apt-get", "install", "-y", "aglfn"),
             new StringContainsInOrder(new ListOf<>("Unpacking aglfn", "Setting up aglfn"))
         );
     }
@@ -166,12 +182,10 @@ public final class DebianSliceITCase {
             con.getResponseCode(),
             new IsEqual<>(Integer.parseInt(RsStatus.OK.code()))
         );
-        this.cntn.execInContainer("apt-get", "update");
-        final Container.ExecResult res =
-            this.cntn.execInContainer("apt-get", "install", "-y", "aglfn");
+        this.exec("apt-get", "update");
         MatcherAssert.assertThat(
             "Package was downloaded and unpacked",
-            res.getStdout(),
+            this.exec("apt-get", "install", "-y", "aglfn"),
             new StringContainsInOrder(new ListOf<>("Unpacking aglfn", "Setting up aglfn"))
         );
     }
@@ -180,5 +194,17 @@ public final class DebianSliceITCase {
     void stop() {
         this.server.stop();
         this.cntn.stop();
+    }
+
+    private void copyPackage(final String pkg) {
+        new TestResource(pkg).saveTo(this.storage, new Key.From("main", pkg));
+        new TestResource("Packages.gz")
+            .saveTo(this.storage, new Key.From("dists/artipie/main/binary-amd64/Packages.gz"));
+    }
+
+    private String exec(final String... command) throws Exception {
+        final Container.ExecResult res = this.cntn.execInContainer(command);
+        Logger.debug(this, "Command:\n%s\nResult:\n%s", String.join(" ", command), res.toString());
+        return res.getStdout();
     }
 }
