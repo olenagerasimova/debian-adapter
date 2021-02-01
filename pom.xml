@@ -68,6 +68,11 @@ SOFTWARE.
       <artifactId>jcabi-log</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.amihaiemil.web</groupId>
+      <artifactId>eo-yaml</artifactId>
+      <version>5.1.5</version>
+    </dependency>
+    <dependency>
       <groupId>com.jcabi</groupId>
       <artifactId>jcabi-matchers</artifactId>
       <scope>test</scope>
