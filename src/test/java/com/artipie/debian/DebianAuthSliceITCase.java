@@ -23,6 +23,7 @@
  */
 package com.artipie.debian;
 
+import com.amihaiemil.eoyaml.Yaml;
 import com.artipie.asto.Storage;
 import com.artipie.asto.memory.InMemoryStorage;
 import com.artipie.asto.test.TestResource;
@@ -192,7 +193,13 @@ public final class DebianAuthSliceITCase {
                     new Authentication.Single(
                         DebianAuthSliceITCase.USER, DebianAuthSliceITCase.PSWD
                     ),
-                    "artipie"
+                    new Config.FromYaml(
+                        "artipie",
+                        Yaml.createYamlMappingBuilder()
+                            .add("Components", "main")
+                            .add("Architectures", "amd64")
+                            .build()
+                    )
                 )
             )
         );

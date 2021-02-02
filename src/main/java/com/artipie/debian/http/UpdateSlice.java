@@ -27,10 +27,12 @@ import com.artipie.asto.Content;
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
 import com.artipie.asto.ext.PublisherAs;
+import com.artipie.debian.Config;
 import com.artipie.debian.metadata.Control;
 import com.artipie.debian.metadata.ControlField;
 import com.artipie.debian.metadata.Package;
 import com.artipie.debian.metadata.PackagesItem;
+import com.artipie.debian.metadata.Release;
 import com.artipie.http.Response;
 import com.artipie.http.Slice;
 import com.artipie.http.async.AsyncResponse;
@@ -59,18 +61,18 @@ public final class UpdateSlice implements Slice {
     private final Storage asto;
 
     /**
-     * Repository name.
+     * Repository configuration.
      */
-    private final String reponame;
+    private final Config config;
 
     /**
      * Ctor.
      * @param asto Abstract storage
-     * @param reponame Repository name
+     * @param config Repository configuration
      */
-    public UpdateSlice(final Storage asto, final String reponame) {
+    public UpdateSlice(final Storage asto, final Config config) {
         this.asto = asto;
-        this.reponame = reponame;
+        this.config = config;
     }
 
     @Override
@@ -87,11 +89,13 @@ public final class UpdateSlice implements Slice {
                         item -> CompletableFuture.allOf(
                             new ControlField.Architecture().value(control).stream().map(
                                 arc -> String.format(
-                                    "dists/%s/main/binary-%s/Packages.gz", this.reponame, arc
+                                    "dists/%s/main/binary-%s/Packages.gz",
+                                    this.config.codename(), arc
                                 )
                             ).map(
-                                index -> new Package.Simple(this.asto)
-                                    .add(item, new Key.From(index))
+                                index -> new Package.Asto(
+                                    this.asto, new Release.Asto(this.asto, this.config)
+                                ).add(item, new Key.From(index))
                             ).toArray(CompletableFuture[]::new)
                         )
                     )

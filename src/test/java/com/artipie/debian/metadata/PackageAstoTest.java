@@ -32,21 +32,26 @@ import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
+import org.apache.commons.lang3.NotImplementedException;
 import org.cactoos.list.ListOf;
 import org.hamcrest.MatcherAssert;
+import org.hamcrest.core.IsEqual;
 import org.hamcrest.text.StringContainsInOrder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * Test for {@link Package.Simple}.
+ * Test for {@link Package.Asto}.
  * @since 0.1
  * @checkstyle ClassDataAbstractionCouplingCheck (500 lines)
  * @checkstyle MagicNumberCheck (500 lines)
  */
 @SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.AssignmentInOperand"})
-class PackageSimpleTest {
+class PackageAstoTest {
 
     /**
      * Packages file index key.
@@ -65,10 +70,13 @@ class PackageSimpleTest {
 
     @Test
     void addsPackagesItem() throws IOException {
-        new TestResource(PackageSimpleTest.KEY).saveTo(this.asto);
-        new Package.Simple(this.asto).add(this.packageInfo(), new Key.From(PackageSimpleTest.KEY))
+        new TestResource(PackageAstoTest.KEY).saveTo(this.asto);
+        final Fake release = new Fake();
+        new Package.Asto(this.asto, release)
+            .add(this.packageInfo(), new Key.From(PackageAstoTest.KEY))
             .toCompletableFuture().join();
         MatcherAssert.assertThat(
+            "Packages index has info about 3 packages",
             this.archiveAsString(),
             new StringContainsInOrder(
                 new ListOf<String>(
@@ -78,19 +86,32 @@ class PackageSimpleTest {
                 )
             )
         );
+        MatcherAssert.assertThat(
+            "Release index file was update",
+            release.count.get(),
+            new IsEqual<>(1)
+        );
     }
 
     @Test
     void addsPackagesItemWhenIndexIsNew() throws IOException {
-        new Package.Simple(this.asto).add(this.packageInfo(), new Key.From(PackageSimpleTest.KEY))
+        final Fake release = new Fake();
+        new Package.Asto(this.asto, release)
+            .add(this.packageInfo(), new Key.From(PackageAstoTest.KEY))
             .toCompletableFuture().join();
         MatcherAssert.assertThat(
+            "Packages index was created with added package",
             this.archiveAsString(),
             new StringContainsInOrder(
                 new ListOf<String>(
                     "Package: abc"
                 )
             )
+        );
+        MatcherAssert.assertThat(
+            "Release index file was update",
+            release.count.get(),
+            new IsEqual<>(1)
         );
     }
 
@@ -114,7 +135,7 @@ class PackageSimpleTest {
             GzipCompressorInputStream gcis = new GzipCompressorInputStream(
                 new BufferedInputStream(
                     new ByteArrayInputStream(
-                        new BlockingStorage(this.asto).value(new Key.From(PackageSimpleTest.KEY))
+                        new BlockingStorage(this.asto).value(new Key.From(PackageAstoTest.KEY))
                     )
                 )
             )
@@ -126,6 +147,29 @@ class PackageSimpleTest {
                 out.write(buf, 0, cnt);
             }
             return out.toString();
+        }
+    }
+
+    /**
+     * Fake {@link Release} implementation for the test.
+     * @since 0.2
+     */
+    private final class Fake implements Release {
+
+        /**
+         * Method calls count.
+         */
+        private final AtomicInteger count = new AtomicInteger(0);
+
+        @Override
+        public CompletionStage<Void> create() {
+            throw new NotImplementedException("Not implemented");
+        }
+
+        @Override
+        public CompletionStage<Void> update(final Key pckg) {
+            this.count.incrementAndGet();
+            return CompletableFuture.allOf();
         }
     }
 

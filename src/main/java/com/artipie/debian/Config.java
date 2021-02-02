@@ -74,12 +74,24 @@ public interface Config {
          * @param yaml Setting in yaml format
          */
         public FromYaml(final String name, final Optional<YamlMapping> yaml) {
-            this.name = name;
-            this.yaml = yaml.orElseThrow(
-                () -> new IllegalArgumentException(
-                    "Illegal config: `setting` section is required for debian repos"
+            this(
+                name,
+                yaml.orElseThrow(
+                    () -> new IllegalArgumentException(
+                        "Illegal config: `setting` section is required for debian repos"
+                    )
                 )
             );
+        }
+
+        /**
+         * Ctor.
+         * @param name Repository name
+         * @param yaml Setting in yaml format
+         */
+        public FromYaml(final String name, final YamlMapping yaml) {
+            this.name = name;
+            this.yaml = yaml;
         }
 
         @Override

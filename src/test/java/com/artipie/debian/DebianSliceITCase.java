@@ -23,6 +23,7 @@
  */
 package com.artipie.debian;
 
+import com.amihaiemil.eoyaml.Yaml;
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
 import com.artipie.asto.memory.InMemoryStorage;
@@ -105,7 +106,18 @@ public final class DebianSliceITCase {
         this.storage = new InMemoryStorage();
         this.server = new VertxSliceServer(
             DebianSliceITCase.VERTX,
-            new LoggingSlice(new DebianSlice(this.storage, "artipie"))
+            new LoggingSlice(
+                new DebianSlice(
+                    this.storage,
+                    new Config.FromYaml(
+                        "artipie",
+                        Yaml.createYamlMappingBuilder()
+                            .add("Components", "main")
+                            .add("Architectures", "amd64")
+                            .build()
+                    )
+                )
+            )
         );
         this.port = this.server.start();
         Testcontainers.exposeHostPorts(this.port);
