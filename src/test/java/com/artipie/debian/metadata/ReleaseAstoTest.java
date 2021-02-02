@@ -33,7 +33,6 @@ import com.artipie.debian.Config;
 import com.artipie.http.slice.KeyFromPath;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import org.cactoos.list.ListOf;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
@@ -63,8 +62,12 @@ class ReleaseAstoTest {
 
     @Test
     void createsReleaseFile() {
-        this.asto.save(new Key.From("dists/abc/main/binaty-amd64/Packages.gz"), Content.EMPTY);
-        this.asto.save(new Key.From("dists/abc/main/binaty-intel/Packages.gz"), Content.EMPTY);
+        this.asto.save(
+            new Key.From("dists/abc/main/binaty-amd64/Packages.gz"), Content.EMPTY
+        ).join();
+        this.asto.save(
+            new Key.From("dists/abc/main/binaty-intel/Packages.gz"), Content.EMPTY
+        ).join();
         new Release.Asto(
             this.asto,
             new Config.FromYaml(
@@ -98,9 +101,11 @@ class ReleaseAstoTest {
 
     @Test
     void addsNewRecord() {
-        this.asto.save(new Key.From("dists/my-deb/main/binaty-amd64/Packages.gz"), Content.EMPTY);
+        this.asto.save(
+            new Key.From("dists/my-deb/main/binaty-amd64/Packages.gz"), Content.EMPTY
+        ).join();
         final Key key = new Key.From("dists/my-deb/main/binaty-intel/Packages.gz");
-        this.asto.save(key, Content.EMPTY);
+        this.asto.save(key, Content.EMPTY).join();
         final ListOf<String> content = new ListOf<>(
             "Codename: my-deb",
             "Architectures: amd64 intel",
@@ -112,7 +117,7 @@ class ReleaseAstoTest {
         this.asto.save(
             new Key.From("dists/my-deb/Release"),
             new Content.From(String.join("\n", content).getBytes(StandardCharsets.UTF_8))
-        );
+        ).join();
         new Release.Asto(
             this.asto,
             new Config.FromYaml(
@@ -132,9 +137,11 @@ class ReleaseAstoTest {
 
     @Test
     void updatesRecord() {
-        this.asto.save(new Key.From("dists/my-repo/main/binaty-amd64/Packages.gz"), Content.EMPTY);
+        this.asto.save(
+            new Key.From("dists/my-repo/main/binaty-amd64/Packages.gz"), Content.EMPTY
+        ).join();
         final Key key = new Key.From("dists/my-repo/main/binaty-intel/Packages.gz");
-        this.asto.save(key, Content.EMPTY);
+        this.asto.save(key, Content.EMPTY).join();
         final ListOf<String> content = new ListOf<>(
             "Codename: my-repo",
             "Architectures: amd64 intel",
@@ -147,7 +154,7 @@ class ReleaseAstoTest {
         this.asto.save(
             new Key.From("dists/my-repo/Release"),
             new Content.From(String.join("\n", content).getBytes(StandardCharsets.UTF_8))
-        );
+        ).join();
         new Release.Asto(
             this.asto,
             new Config.FromYaml(
@@ -155,23 +162,13 @@ class ReleaseAstoTest {
                 Optional.of(Yaml.createYamlMappingBuilder().build())
             )
         ).update(key).toCompletableFuture().join();
+        // @checkstyle LineLengthCheck (2 lines)
+        // @checkstyle MagicNumberCheck (1 line)
+        content.set(5, " e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 main/binaty-intel/Packages.gz");
         MatcherAssert.assertThat(
             new PublisherAs(this.asto.value(new KeyFromPath("dists/my-repo/Release")).join())
                 .asciiString().toCompletableFuture().join(),
-            new IsEqual<>(
-                content.stream().map(
-                    item -> {
-                        final String res;
-                        if (item.contains("main/binaty-intel/Packages.gz")) {
-                            // @checkstyle LineLengthCheck (1 line)
-                            res = item.replace("xyz098", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
-                        } else {
-                            res = item;
-                        }
-                        return res;
-                    }
-                ).collect(Collectors.joining("\n"))
-            )
+            new IsEqual<>(String.join("\n", content))
         );
     }
 }
