@@ -31,12 +31,15 @@ import com.artipie.asto.ext.PublisherAs;
 import com.artipie.asto.memory.InMemoryStorage;
 import com.artipie.debian.Config;
 import com.artipie.http.slice.KeyFromPath;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import org.cactoos.list.ListOf;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
+import org.hamcrest.core.IsEqual;
 import org.hamcrest.core.StringContains;
 import org.hamcrest.text.StringContainsInOrder;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -44,15 +47,29 @@ import org.junit.jupiter.api.Test;
  * @since 0.2
  * @checkstyle ClassDataAbstractionCouplingCheck (500 lines)
  */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class ReleaseAstoTest {
+
+    /**
+     * Test storage.
+     */
+    private Storage asto;
+
+    @BeforeEach
+    void init() {
+        this.asto = new InMemoryStorage();
+    }
 
     @Test
     void createsReleaseFile() {
-        final Storage asto = new InMemoryStorage();
-        asto.save(new Key.From("dists/abc/main/binaty-amd64/Packages.gz"), Content.EMPTY);
-        asto.save(new Key.From("dists/abc/main/binaty-intel/Packages.gz"), Content.EMPTY);
+        this.asto.save(
+            new Key.From("dists/abc/main/binaty-amd64/Packages.gz"), Content.EMPTY
+        ).join();
+        this.asto.save(
+            new Key.From("dists/abc/main/binaty-intel/Packages.gz"), Content.EMPTY
+        ).join();
         new Release.Asto(
-            asto,
+            this.asto,
             new Config.FromYaml(
                 "abc",
                 Optional.of(
@@ -64,7 +81,7 @@ class ReleaseAstoTest {
             )
         ).create().toCompletableFuture().join();
         MatcherAssert.assertThat(
-            new PublisherAs(asto.value(new KeyFromPath("dists/abc/Release")).join())
+            new PublisherAs(this.asto.value(new KeyFromPath("dists/abc/Release")).join())
                 .asciiString().toCompletableFuture().join(),
             Matchers.allOf(
                 new StringContainsInOrder(
@@ -79,6 +96,79 @@ class ReleaseAstoTest {
                 new StringContains("main/binaty-amd64/Packages.gz"),
                 new StringContains("main/binaty-intel/Packages.gz")
             )
+        );
+    }
+
+    @Test
+    void addsNewRecord() {
+        this.asto.save(
+            new Key.From("dists/my-deb/main/binaty-amd64/Packages.gz"), Content.EMPTY
+        ).join();
+        final Key key = new Key.From("dists/my-deb/main/binaty-intel/Packages.gz");
+        this.asto.save(key, Content.EMPTY).join();
+        final ListOf<String> content = new ListOf<>(
+            "Codename: my-deb",
+            "Architectures: amd64 intel",
+            "Components: main",
+            "Date:",
+            "SHA256:",
+            " abc123 main/binaty-amd64/Packages.gz"
+        );
+        this.asto.save(
+            new Key.From("dists/my-deb/Release"),
+            new Content.From(String.join("\n", content).getBytes(StandardCharsets.UTF_8))
+        ).join();
+        new Release.Asto(
+            this.asto,
+            new Config.FromYaml(
+                "my-deb",
+                Optional.of(Yaml.createYamlMappingBuilder().build())
+            )
+        ).update(key).toCompletableFuture().join();
+        MatcherAssert.assertThat(
+            new PublisherAs(this.asto.value(new KeyFromPath("dists/my-deb/Release")).join())
+                .asciiString().toCompletableFuture().join(),
+            Matchers.allOf(
+                new StringContainsInOrder(content),
+                new StringContains("main/binaty-intel/Packages.gz")
+            )
+        );
+    }
+
+    @Test
+    void updatesRecord() {
+        this.asto.save(
+            new Key.From("dists/my-repo/main/binaty-amd64/Packages.gz"), Content.EMPTY
+        ).join();
+        final Key key = new Key.From("dists/my-repo/main/binaty-intel/Packages.gz");
+        this.asto.save(key, Content.EMPTY).join();
+        final ListOf<String> content = new ListOf<>(
+            "Codename: my-repo",
+            "Architectures: amd64 intel",
+            "Components: main",
+            "Date:",
+            "SHA256:",
+            " xyz098 main/binaty-intel/Packages.gz",
+            " abc123 main/binaty-amd64/Packages.gz"
+        );
+        this.asto.save(
+            new Key.From("dists/my-repo/Release"),
+            new Content.From(String.join("\n", content).getBytes(StandardCharsets.UTF_8))
+        ).join();
+        new Release.Asto(
+            this.asto,
+            new Config.FromYaml(
+                "my-repo",
+                Optional.of(Yaml.createYamlMappingBuilder().build())
+            )
+        ).update(key).toCompletableFuture().join();
+        // @checkstyle LineLengthCheck (2 lines)
+        // @checkstyle MagicNumberCheck (1 line)
+        content.set(5, " e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 main/binaty-intel/Packages.gz");
+        MatcherAssert.assertThat(
+            new PublisherAs(this.asto.value(new KeyFromPath("dists/my-repo/Release")).join())
+                .asciiString().toCompletableFuture().join(),
+            new IsEqual<>(String.join("\n", content))
         );
     }
 }
