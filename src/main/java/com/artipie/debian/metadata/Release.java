@@ -29,6 +29,7 @@ import com.artipie.asto.Storage;
 import com.artipie.asto.SubStorage;
 import com.artipie.asto.ext.ContentDigest;
 import com.artipie.asto.ext.Digests;
+import com.artipie.asto.ext.PublisherAs;
 import com.artipie.asto.rx.RxStorageWrapper;
 import com.artipie.debian.Config;
 import hu.akarnokd.rxjava2.interop.SingleInterop;
@@ -37,7 +38,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.CompletionStage;
-import org.apache.commons.lang3.NotImplementedException;
+import java.util.regex.Pattern;
 import org.cactoos.map.MapEntry;
 
 /**
@@ -104,7 +105,7 @@ public interface Release {
                     )
                 ).thenCompose(
                     file -> this.asto.save(
-                        new Key.From(String.format("dists/%s/Release", this.config.codename())),
+                        this.releaseKey(),
                         new Content.From(file.getBytes(StandardCharsets.UTF_8))
                     )
                 );
@@ -112,18 +113,56 @@ public interface Release {
 
         @Override
         public CompletionStage<Void> update(final Key pckg) {
-            throw new NotImplementedException("Not yet implemented");
+            final String key = pckg.string().replace(this.subDir(), "");
+            return this.asto.value(pckg).thenCompose(
+                content -> new ContentDigest(content, Digests.SHA256).hex()
+            ).thenCompose(
+                hex -> this.asto.value(this.releaseKey()).thenCompose(
+                    content -> new PublisherAs(content).asciiString().thenApply(
+                        str -> {
+                            final String res;
+                            if (str.contains(key)) {
+                                res = str.replaceAll(
+                                    String.format(" .* %s\n", Pattern.quote(key)),
+                                    String.format(" %s %s\n", hex, key)
+                                );
+                            } else {
+                                res = String.format("%s\n %s %s", str, hex, key);
+                            }
+                            return res;
+                        }
+                    ).thenCompose(
+                        str -> this.asto.save(
+                            this.releaseKey(),
+                            new Content.From(str.getBytes(StandardCharsets.UTF_8))
+                        )
+                    )
+                )
+            );
+        }
+
+        /**
+         * Repository subdirectory.
+         * @return Subdir path
+         */
+        private String subDir() {
+            return String.format("dists/%s/", this.config.codename());
+        }
+
+        /**
+         * Release index file key.
+         * @return Key of the file
+         */
+        private Key releaseKey() {
+            return new Key.From(String.format("dists/%s/Release", this.config.codename()));
         }
 
         /**
          * SHA256 checksums of Packages.gz files.
          * @return Checksums future
          */
-        public CompletionStage<String> checksums() {
-            final SubStorage sub = new SubStorage(
-                new Key.From(String.format("dists/%s/", this.config.codename())),
-                this.asto
-            );
+        private CompletionStage<String> checksums() {
+            final SubStorage sub = new SubStorage(new Key.From(this.subDir()), this.asto);
             final RxStorageWrapper rxsto = new RxStorageWrapper(sub);
             return rxsto.list(Key.ROOT).flatMapObservable(Observable::fromIterable)
                 .filter(key -> key.string().endsWith("Packages.gz"))
