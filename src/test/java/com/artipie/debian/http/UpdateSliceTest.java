@@ -70,6 +70,7 @@ class UpdateSliceTest {
 
     @Test
     void uploadsAndCreatesIndex() {
+        this.asto.save(new Key.From("dists/my_repo/Release"), Content.EMPTY);
         MatcherAssert.assertThat(
             "Response is OK",
             new UpdateSlice(
@@ -97,6 +98,7 @@ class UpdateSliceTest {
 
     @Test
     void uploadsAndUpdatesIndex() throws IOException {
+        this.asto.save(new Key.From("dists/deb_repo/Release"), Content.EMPTY);
         final String key = "dists/deb_repo/main/binary-all/Packages.gz";
         new TestResource("Packages.gz").saveTo(this.asto, new Key.From(key));
         MatcherAssert.assertThat(
