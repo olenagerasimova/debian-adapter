@@ -24,6 +24,7 @@
 package com.artipie.debian.http;
 
 import com.artipie.asto.Storage;
+import com.artipie.debian.Config;
 import com.artipie.http.Slice;
 import com.artipie.http.auth.Action;
 import com.artipie.http.auth.Authentication;
@@ -49,10 +50,10 @@ public final class DebianSlice extends Slice.Wrap {
     /**
      * Ctor.
      * @param storage Storage
-     * @param reponame Repository name
+     * @param config Repository configuration
      */
-    public DebianSlice(final Storage storage, final String reponame) {
-        this(storage, Permissions.FREE, Authentication.ANONYMOUS, reponame);
+    public DebianSlice(final Storage storage, final Config config) {
+        this(storage, Permissions.FREE, Authentication.ANONYMOUS, config);
     }
 
     /**
@@ -60,17 +61,17 @@ public final class DebianSlice extends Slice.Wrap {
      * @param storage Storage
      * @param perms Permissions
      * @param users Users
-     * @param reponame Repository name
+     * @param config Repository configuration
      * @checkstyle ParameterNumberCheck (5 lines)
      */
     public DebianSlice(final Storage storage, final Permissions perms,
-        final Authentication users, final String reponame) {
+        final Authentication users, final Config config) {
         super(
             new SliceRoute(
                 new RtRulePath(
                     new ByMethodsRule(RqMethod.GET),
                     new BasicAuthSlice(
-                        new SliceDownload(storage),
+                        new ReleaseSlice(new SliceDownload(storage), storage, config),
                         users,
                         new Permission.ByName(perms, Action.Standard.READ)
                     )
@@ -80,7 +81,7 @@ public final class DebianSlice extends Slice.Wrap {
                         new ByMethodsRule(RqMethod.PUT), new ByMethodsRule(RqMethod.POST)
                     ),
                     new BasicAuthSlice(
-                        new UpdateSlice(storage, reponame),
+                        new ReleaseSlice(new UpdateSlice(storage, config), storage, config),
                         users,
                         new Permission.ByName(perms, Action.Standard.WRITE)
                     )

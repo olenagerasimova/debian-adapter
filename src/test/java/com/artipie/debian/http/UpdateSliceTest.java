@@ -23,12 +23,14 @@
  */
 package com.artipie.debian.http;
 
+import com.amihaiemil.eoyaml.Yaml;
 import com.artipie.asto.Content;
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
 import com.artipie.asto.blocking.BlockingStorage;
 import com.artipie.asto.memory.InMemoryStorage;
 import com.artipie.asto.test.TestResource;
+import com.artipie.debian.Config;
 import com.artipie.http.Headers;
 import com.artipie.http.hm.RsHasStatus;
 import com.artipie.http.hm.SliceHasResponse;
@@ -68,9 +70,13 @@ class UpdateSliceTest {
 
     @Test
     void uploadsAndCreatesIndex() {
+        this.asto.save(new Key.From("dists/my_repo/Release"), Content.EMPTY);
         MatcherAssert.assertThat(
             "Response is OK",
-            new UpdateSlice(this.asto, "my_repo"),
+            new UpdateSlice(
+                this.asto,
+                new Config.FromYaml("my_repo", Yaml.createYamlMappingBuilder().build())
+            ),
             new SliceHasResponse(
                 new RsHasStatus(RsStatus.OK),
                 new RequestLine(RqMethod.PUT, "/main/aglfn_1.7-3_all.deb"),
@@ -92,11 +98,15 @@ class UpdateSliceTest {
 
     @Test
     void uploadsAndUpdatesIndex() throws IOException {
+        this.asto.save(new Key.From("dists/deb_repo/Release"), Content.EMPTY);
         final String key = "dists/deb_repo/main/binary-all/Packages.gz";
         new TestResource("Packages.gz").saveTo(this.asto, new Key.From(key));
         MatcherAssert.assertThat(
             "Response is OK",
-            new UpdateSlice(this.asto, "deb_repo"),
+            new UpdateSlice(
+                this.asto,
+                new Config.FromYaml("deb_repo", Yaml.createYamlMappingBuilder().build())
+            ),
             new SliceHasResponse(
                 new RsHasStatus(RsStatus.OK),
                 new RequestLine(RqMethod.PUT, "/main/cm-super_0.3.4-14_all.deb"),
@@ -125,7 +135,10 @@ class UpdateSliceTest {
     void returnsErrorAndRemovesItem() {
         MatcherAssert.assertThat(
             "Response is internal error",
-            new UpdateSlice(this.asto, "my_repo"),
+            new UpdateSlice(
+                this.asto,
+                new Config.FromYaml("my_repo", Yaml.createYamlMappingBuilder().build())
+            ),
             new SliceHasResponse(
                 new RsHasStatus(RsStatus.INTERNAL_ERROR),
                 new RequestLine(RqMethod.PUT, "/main/corrupted.deb"),

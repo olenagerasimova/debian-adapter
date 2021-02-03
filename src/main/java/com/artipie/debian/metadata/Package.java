@@ -58,7 +58,7 @@ public interface Package {
      * @since 0.1
      * @checkstyle ClassDataAbstractionCouplingCheck (100 lines)
      */
-    final class Simple implements Package {
+    final class Asto implements Package {
 
         /**
          * Abstract storage.
@@ -66,11 +66,18 @@ public interface Package {
         private final Storage asto;
 
         /**
+         * Repository Release index.
+         */
+        private final Release release;
+
+        /**
          * Ctor.
          * @param asto Storage
+         * @param release Repository Release index
          */
-        public Simple(final Storage asto) {
+        public Asto(final Storage asto, final Release release) {
             this.asto = asto;
+            this.release = release;
         }
 
         @Override
@@ -82,16 +89,18 @@ public interface Package {
                         res = this.asto.value(index).thenCompose(
                             content -> new PublisherAs(content).bytes()
                         ).thenApply(
-                            bytes -> Simple.unpackAppendCompress(bytes, item)
+                            bytes -> Asto.unpackAppendCompress(bytes, item)
                         );
                     } else {
                         res = CompletableFuture.completedFuture(
-                            Simple.compress(item.getBytes(StandardCharsets.UTF_8))
+                            Asto.compress(item.getBytes(StandardCharsets.UTF_8))
                         );
                     }
                     return res;
                 }
-            ).thenCompose(res -> this.asto.save(index, new Content.From(res)));
+            )
+                .thenCompose(res -> this.asto.save(index, new Content.From(res)))
+                .thenCompose(nothing -> this.release.update(index));
         }
 
         /**
@@ -116,7 +125,7 @@ public interface Package {
                 }
                 out.write("\n\n".getBytes(StandardCharsets.UTF_8));
                 out.write(item.getBytes(StandardCharsets.UTF_8));
-                return Simple.compress(out.toByteArray());
+                return Asto.compress(out.toByteArray());
             } catch (final IOException ex) {
                 throw new UncheckedIOException(ex);
             }
