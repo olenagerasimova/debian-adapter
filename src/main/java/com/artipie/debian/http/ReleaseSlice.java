@@ -53,9 +53,21 @@ public final class ReleaseSlice implements Slice {
     private final Storage storage;
 
     /**
-     * Repository configuration.
+     * Repository release index.
      */
-    private final Config config;
+    private final Release release;
+
+    /**
+     * Ctor.
+     * @param origin Origin
+     * @param asto Storage
+     * @param release Release index
+     */
+    public ReleaseSlice(final Slice origin, final Storage asto, final Release release) {
+        this.origin = origin;
+        this.release = release;
+        this.storage = asto;
+    }
 
     /**
      * Ctor.
@@ -64,9 +76,7 @@ public final class ReleaseSlice implements Slice {
      * @param config Repository configuration
      */
     public ReleaseSlice(final Slice origin, final Storage asto, final Config config) {
-        this.origin = origin;
-        this.config = config;
-        this.storage = asto;
+        this(origin, asto, new Release.Asto(asto, config));
     }
 
     @Override
@@ -75,9 +85,8 @@ public final class ReleaseSlice implements Slice {
         final Iterable<Map.Entry<String, String>> headers,
         final Publisher<ByteBuffer> body
     ) {
-        final Release release = new Release.Asto(this.storage, this.config);
         return new AsyncResponse(
-            this.storage.exists(release.key()).thenCompose(
+            this.storage.exists(this.release.key()).thenCompose(
                 exists -> {
                     final CompletionStage<Response> res;
                     if (exists) {
@@ -85,7 +94,7 @@ public final class ReleaseSlice implements Slice {
                             this.origin.response(line, headers, body)
                         );
                     } else {
-                        res = release.create().thenApply(
+                        res = this.release.create().thenApply(
                             nothing -> this.origin.response(line, headers, body)
                         );
                     }
