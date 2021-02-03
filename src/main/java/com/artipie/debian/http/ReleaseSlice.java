@@ -23,7 +23,6 @@
  */
 package com.artipie.debian.http;
 
-import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
 import com.artipie.debian.Config;
 import com.artipie.debian.metadata.Release;
@@ -76,10 +75,9 @@ public final class ReleaseSlice implements Slice {
         final Iterable<Map.Entry<String, String>> headers,
         final Publisher<ByteBuffer> body
     ) {
+        final Release release = new Release.Asto(this.storage, this.config);
         return new AsyncResponse(
-            this.storage.exists(
-                new Key.From(String.format("dists/%s/Release", this.config.codename()))
-            ).thenCompose(
+            this.storage.exists(release.key()).thenCompose(
                 exists -> {
                     final CompletionStage<Response> res;
                     if (exists) {
@@ -87,8 +85,9 @@ public final class ReleaseSlice implements Slice {
                             this.origin.response(line, headers, body)
                         );
                     } else {
-                        res = new Release.Asto(this.storage, this.config).create()
-                            .thenApply(nothing -> this.origin.response(line, headers, body));
+                        res = release.create().thenApply(
+                            nothing -> this.origin.response(line, headers, body)
+                        );
                     }
                     return res;
                 }

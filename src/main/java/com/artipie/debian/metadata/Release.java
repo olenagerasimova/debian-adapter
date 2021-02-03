@@ -61,6 +61,12 @@ public interface Release {
     CompletionStage<Void> update(Key pckg);
 
     /**
+     * Release index file storage key.
+     * @return Item key
+     */
+    Key key();
+
+    /**
      * Implementation of {@link Release} from abstract storage.
      * @since 0.2
      */
@@ -105,7 +111,7 @@ public interface Release {
                     )
                 ).thenCompose(
                     file -> this.asto.save(
-                        this.releaseKey(),
+                        this.key(),
                         new Content.From(file.getBytes(StandardCharsets.UTF_8))
                     )
                 );
@@ -117,7 +123,7 @@ public interface Release {
             return this.asto.value(pckg).thenCompose(
                 content -> new ContentDigest(content, Digests.SHA256).hex()
             ).thenCompose(
-                hex -> this.asto.value(this.releaseKey()).thenCompose(
+                hex -> this.asto.value(this.key()).thenCompose(
                     content -> new PublisherAs(content).asciiString().thenApply(
                         str -> {
                             final String res;
@@ -133,12 +139,17 @@ public interface Release {
                         }
                     ).thenCompose(
                         str -> this.asto.save(
-                            this.releaseKey(),
+                            this.key(),
                             new Content.From(str.getBytes(StandardCharsets.UTF_8))
                         )
                     )
                 )
             );
+        }
+
+        @Override
+        public Key key() {
+            return new Key.From(String.format("dists/%s/Release", this.config.codename()));
         }
 
         /**
@@ -147,14 +158,6 @@ public interface Release {
          */
         private String subDir() {
             return String.format("dists/%s/", this.config.codename());
-        }
-
-        /**
-         * Release index file key.
-         * @return Key of the file
-         */
-        private Key releaseKey() {
-            return new Key.From(String.format("dists/%s/Release", this.config.codename()));
         }
 
         /**
