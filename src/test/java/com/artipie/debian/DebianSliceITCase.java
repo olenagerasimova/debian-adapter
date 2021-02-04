@@ -162,8 +162,6 @@ public final class DebianSliceITCase {
     @Test
     void installWithInReleaseFileWorks() throws Exception {
         this.copyPackage("aglfn_1.7-3_amd64.deb");
-        new TestResource("Release")
-            .saveTo(this.storage, new Key.From("dists/artipie/Release"));
         MatcherAssert.assertThat(
             "Release file is used on update the world",
             this.exec("apt-get", "update"),
