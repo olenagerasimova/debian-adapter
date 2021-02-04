@@ -39,7 +39,6 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.CompletionStage;
 import java.util.regex.Pattern;
-import org.cactoos.map.MapEntry;
 
 /**
  * Release metadata file.
@@ -124,16 +123,20 @@ public interface Release {
                 content -> new ContentDigest(content, Digests.SHA256).hex()
             ).thenCompose(
                 hex -> this.asto.value(this.key()).thenCompose(
-                    content -> new PublisherAs(content).asciiString().thenApply(
-                        str -> {
+                    content -> new PublisherAs(content).asciiString().thenCombine(
+                        this.asto.value(pckg),
+                        (str, val) -> {
                             final String res;
+                            final Long size = Asto.contentSize(val, pckg);
                             if (str.contains(key)) {
                                 res = str.replaceAll(
                                     String.format(" .* %s\n", Pattern.quote(key)),
-                                    String.format(" %s %s\n", hex, key)
+                                    String.format(
+                                        " %s %d %s\n", hex, size, key
+                                    )
                                 );
                             } else {
-                                res = String.format("%s\n %s %s", str, hex, key);
+                                res = String.format("%s\n %s %d %s", str, hex, size, key);
                             }
                             return res;
                         }
@@ -172,16 +175,35 @@ public interface Release {
                 .flatMapSingle(
                     item -> SingleInterop.fromFuture(
                         sub.value(item).thenCompose(
-                            content -> new ContentDigest(content, Digests.SHA256).hex()
-                        ).thenApply(hash -> new MapEntry<>(item, hash))
+                            content -> new ContentDigest(content, Digests.SHA256).hex().thenApply(
+                                hex -> String.format(
+                                    "%s %s %s", hex,
+                                    Asto.contentSize(content, item),
+                                    item.string()
+                                )
+                            )
+                        )
                     )
                 ).collect(
                     StringBuilder::new,
-                    (builder, hash) -> builder.append(" ").append(hash.getValue())
-                        .append(" ").append(hash.getKey().string()).append("\n")
+                    (builder, val) -> builder.append(" ").append(val).append("\n")
                 )
                 .map(StringBuilder::toString)
                 .to(SingleInterop.get());
+        }
+
+        /**
+         * Content size.
+         * @param content Content to obtain size from
+         * @param key Content key
+         * @return Size
+         */
+        private static Long contentSize(final Content content, final Key key) {
+            return content.size().orElseThrow(
+                () -> new IllegalStateException(
+                    String.format("Content item %s size unknown", key.string())
+                )
+            );
         }
     }
 }

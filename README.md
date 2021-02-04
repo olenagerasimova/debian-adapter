@@ -65,8 +65,8 @@ Codename: artipie #Repository name
 Architectures: amd64 #Space separated supported architectures set
 Components: main #Repository components set
 Date: Sat, 05 Dec 2020 10:35:57 UTC #Creation date
-SHA256: #checksums for Packages indexes
- eb8cb7a51d9fe47bde0a32a310b93c01dba531c6f8d14362552f65fcc4277af8 main/binary-amd64/Packages.gz
+SHA256: #checksums and sizes for Packages indexes
+ eb8cb7a51d9fe47bde0a32a310b93c01dba531c6f8d14362552f65fcc4277af8 1351 main/binary-amd64/Packages.gz
 ```
 
 The most important fields here are `Architectures` (list of the [architectures](https://wiki.debian.org/SupportedArchitectures) 

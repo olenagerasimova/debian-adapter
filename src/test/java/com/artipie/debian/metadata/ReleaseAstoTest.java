@@ -46,6 +46,7 @@ import org.junit.jupiter.api.Test;
  * Test for {@link Release.Asto}.
  * @since 0.2
  * @checkstyle ClassDataAbstractionCouplingCheck (500 lines)
+ * @checkstyle MagicNumberCheck (500 lines)
  */
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class ReleaseAstoTest {
@@ -63,10 +64,11 @@ class ReleaseAstoTest {
     @Test
     void createsReleaseFile() {
         this.asto.save(
-            new Key.From("dists/abc/main/binaty-amd64/Packages.gz"), Content.EMPTY
+            new Key.From("dists/abc/main/binaty-amd64/Packages.gz"), new Content.From(new byte[]{1})
         ).join();
         this.asto.save(
-            new Key.From("dists/abc/main/binaty-intel/Packages.gz"), Content.EMPTY
+            new Key.From("dists/abc/main/binaty-intel/Packages.gz"),
+            new Content.From(new byte[]{3, 3, 2, 3})
         ).join();
         new Release.Asto(
             this.asto,
@@ -93,8 +95,9 @@ class ReleaseAstoTest {
                         "SHA256:"
                     )
                 ),
-                new StringContains("main/binaty-amd64/Packages.gz"),
-                new StringContains("main/binaty-intel/Packages.gz")
+                // @checkstyle LineLengthCheck (2 lines)
+                new StringContains("9228ffab3f78914b08f49530b3075b6726d721c9e0cd4133296367eec74e3122 4 main/binaty-intel/Packages.gz"),
+                new StringContains("4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a 1 main/binaty-amd64/Packages.gz")
             )
         );
     }
@@ -105,14 +108,14 @@ class ReleaseAstoTest {
             new Key.From("dists/my-deb/main/binaty-amd64/Packages.gz"), Content.EMPTY
         ).join();
         final Key key = new Key.From("dists/my-deb/main/binaty-intel/Packages.gz");
-        this.asto.save(key, Content.EMPTY).join();
+        this.asto.save(key, new Content.From("any".getBytes())).join();
         final ListOf<String> content = new ListOf<>(
             "Codename: my-deb",
             "Architectures: amd64 intel",
             "Components: main",
             "Date:",
             "SHA256:",
-            " abc123 main/binaty-amd64/Packages.gz"
+            " abc123 1 main/binaty-amd64/Packages.gz"
         );
         this.asto.save(
             new Key.From("dists/my-deb/Release"),
@@ -130,7 +133,8 @@ class ReleaseAstoTest {
                 .asciiString().toCompletableFuture().join(),
             Matchers.allOf(
                 new StringContainsInOrder(content),
-                new StringContains("main/binaty-intel/Packages.gz")
+                // @checkstyle LineLengthCheck (1 line)
+                new StringContains("d6a7cd2a7371b1a15d543196979ff74fdb027023ebf187d5d329be11055c77fd 3 main/binaty-intel/Packages.gz")
             )
         );
     }
@@ -148,8 +152,8 @@ class ReleaseAstoTest {
             "Components: main",
             "Date:",
             "SHA256:",
-            " xyz098 main/binaty-intel/Packages.gz",
-            " abc123 main/binaty-amd64/Packages.gz"
+            " xyz098 12 main/binaty-intel/Packages.gz",
+            " abc123 32 main/binaty-amd64/Packages.gz"
         );
         this.asto.save(
             new Key.From("dists/my-repo/Release"),
@@ -163,8 +167,7 @@ class ReleaseAstoTest {
             )
         ).update(key).toCompletableFuture().join();
         // @checkstyle LineLengthCheck (2 lines)
-        // @checkstyle MagicNumberCheck (1 line)
-        content.set(5, " e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 main/binaty-intel/Packages.gz");
+        content.set(5, " e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 main/binaty-intel/Packages.gz");
         MatcherAssert.assertThat(
             new PublisherAs(this.asto.value(new KeyFromPath("dists/my-repo/Release")).join())
                 .asciiString().toCompletableFuture().join(),
