@@ -171,4 +171,18 @@ class ReleaseAstoTest {
             new IsEqual<>(String.join("\n", content))
         );
     }
+
+    @Test
+    void returnsReleaseIndexKey() {
+        MatcherAssert.assertThat(
+            new Release.Asto(
+                this.asto,
+                new Config.FromYaml(
+                    "deb-repo",
+                    Optional.of(Yaml.createYamlMappingBuilder().build())
+                )
+            ).key(),
+            new IsEqual<>(new Key.From("dists/deb-repo/Release"))
+        );
+    }
 }

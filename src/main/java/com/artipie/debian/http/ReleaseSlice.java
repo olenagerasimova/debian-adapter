@@ -23,7 +23,6 @@
  */
 package com.artipie.debian.http;
 
-import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
 import com.artipie.debian.Config;
 import com.artipie.debian.metadata.Release;
@@ -54,9 +53,21 @@ public final class ReleaseSlice implements Slice {
     private final Storage storage;
 
     /**
-     * Repository configuration.
+     * Repository release index.
      */
-    private final Config config;
+    private final Release release;
+
+    /**
+     * Ctor.
+     * @param origin Origin
+     * @param asto Storage
+     * @param release Release index
+     */
+    public ReleaseSlice(final Slice origin, final Storage asto, final Release release) {
+        this.origin = origin;
+        this.release = release;
+        this.storage = asto;
+    }
 
     /**
      * Ctor.
@@ -65,9 +76,7 @@ public final class ReleaseSlice implements Slice {
      * @param config Repository configuration
      */
     public ReleaseSlice(final Slice origin, final Storage asto, final Config config) {
-        this.origin = origin;
-        this.config = config;
-        this.storage = asto;
+        this(origin, asto, new Release.Asto(asto, config));
     }
 
     @Override
@@ -77,9 +86,7 @@ public final class ReleaseSlice implements Slice {
         final Publisher<ByteBuffer> body
     ) {
         return new AsyncResponse(
-            this.storage.exists(
-                new Key.From(String.format("dists/%s/Release", this.config.codename()))
-            ).thenCompose(
+            this.storage.exists(this.release.key()).thenCompose(
                 exists -> {
                     final CompletionStage<Response> res;
                     if (exists) {
@@ -87,8 +94,9 @@ public final class ReleaseSlice implements Slice {
                             this.origin.response(line, headers, body)
                         );
                     } else {
-                        res = new Release.Asto(this.storage, this.config).create()
-                            .thenApply(nothing -> this.origin.response(line, headers, body));
+                        res = this.release.create().thenApply(
+                            nothing -> this.origin.response(line, headers, body)
+                        );
                     }
                     return res;
                 }

@@ -171,6 +171,11 @@ class PackageAstoTest {
             this.count.incrementAndGet();
             return CompletableFuture.allOf();
         }
+
+        @Override
+        public Key key() {
+            throw new NotImplementedException("Not implemented");
+        }
     }
 
 }
