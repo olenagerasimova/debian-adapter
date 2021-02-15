@@ -42,10 +42,12 @@ import com.artipie.http.rs.RsWithStatus;
 import com.artipie.http.rs.StandardRs;
 import com.artipie.http.slice.KeyFromPath;
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.reactivestreams.Publisher;
 
 /**
@@ -85,30 +87,43 @@ public final class UpdateSlice implements Slice {
                 .thenCompose(content -> new PublisherAs(content).bytes())
                 .thenApply(bytes -> new Control.FromBinary(bytes).asString())
                 .thenCompose(
-                    control -> new PackagesItem.Asto(this.asto).format(control, key).thenCompose(
-                        item -> CompletableFuture.allOf(
-                            new ControlField.Architecture().value(control).stream().map(
-                                arc -> String.format(
-                                    "dists/%s/main/binary-%s/Packages.gz",
-                                    this.config.codename(), arc
-                                )
-                            ).map(
-                                index -> new Package.Asto(
-                                    this.asto, new Release.Asto(this.asto, this.config)
-                                ).add(item, new Key.From(index))
-                            ).toArray(CompletableFuture[]::new)
-                        )
-                    )
-                ).handle(
-                    (nothing, throwable) -> {
-                        final CompletionStage<Response> resp;
-                        if (throwable == null) {
-                            resp = CompletableFuture.completedFuture(StandardRs.OK);
+                    control -> {
+                        final List<String> common = new ControlField.Architecture().value(control)
+                            .stream().filter(item -> this.config.archs().contains(item))
+                            .collect(Collectors.toList());
+                        final CompletionStage<Response> res;
+                        if (common.isEmpty()) {
+                            res = this.asto.delete(key).thenApply(
+                                nothing -> new RsWithStatus(RsStatus.BAD_REQUEST)
+                            );
                         } else {
-                            resp = this.asto.delete(key)
-                                .thenApply(ignired -> new RsWithStatus(RsStatus.INTERNAL_ERROR));
+                            res = new PackagesItem.Asto(this.asto).format(control, key).thenCompose(
+                                item -> CompletableFuture.allOf(
+                                    common.stream().map(
+                                        arc -> String.format(
+                                            "dists/%s/main/binary-%s/Packages.gz",
+                                            this.config.codename(), arc
+                                        )
+                                    ).map(
+                                        index -> new Package.Asto(
+                                            this.asto, new Release.Asto(this.asto, this.config)
+                                        ).add(item, new Key.From(index))
+                                    ).toArray(CompletableFuture[]::new)
+                                )
+                            ).thenApply(nothing -> StandardRs.OK);
                         }
-                        return resp;
+                        return res;
+                    }
+                ).handle(
+                    (resp, throwable) -> {
+                        final CompletionStage<Response> res;
+                        if (throwable == null) {
+                            res = CompletableFuture.completedFuture(resp);
+                        } else {
+                            res = this.asto.delete(key)
+                                .thenApply(nothing -> new RsWithStatus(RsStatus.INTERNAL_ERROR));
+                        }
+                        return res;
                     }
             ).thenCompose(Function.identity())
         );
