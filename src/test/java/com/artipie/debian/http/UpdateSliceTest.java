@@ -24,6 +24,7 @@
 package com.artipie.debian.http;
 
 import com.amihaiemil.eoyaml.Yaml;
+import com.amihaiemil.eoyaml.YamlMapping;
 import com.artipie.asto.Content;
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
@@ -59,6 +60,13 @@ import org.junit.jupiter.api.Test;
 class UpdateSliceTest {
 
     /**
+     * Repository settings.
+     */
+    private static final YamlMapping SETTINGS = Yaml.createYamlMappingBuilder()
+        .add("Architectures", "amd64")
+        .add("Components", "main").build();
+
+    /**
      * Test storage.
      */
     private Storage asto;
@@ -75,12 +83,7 @@ class UpdateSliceTest {
             "Response is OK",
             new UpdateSlice(
                 this.asto,
-                new Config.FromYaml(
-                    "my_repo",
-                    Yaml.createYamlMappingBuilder()
-                        .add("Architectures", "amd64")
-                        .add("Components", "main").build()
-                )
+                new Config.FromYaml("my_repo", UpdateSliceTest.SETTINGS)
             ),
             new SliceHasResponse(
                 new RsHasStatus(RsStatus.OK),
@@ -112,9 +115,7 @@ class UpdateSliceTest {
                 this.asto,
                 new Config.FromYaml(
                     "deb_repo",
-                    Yaml.createYamlMappingBuilder()
-                        .add("Architectures", "amd64")
-                        .add("Components", "main").build()
+                    UpdateSliceTest.SETTINGS
                 )
             ),
             new SliceHasResponse(
@@ -149,9 +150,7 @@ class UpdateSliceTest {
                 this.asto,
                 new Config.FromYaml(
                     "my_repo",
-                    Yaml.createYamlMappingBuilder()
-                        .add("Architectures", "amd64")
-                        .add("Components", "main").build()
+                    UpdateSliceTest.SETTINGS
                 )
             ),
             new SliceHasResponse(
@@ -176,9 +175,7 @@ class UpdateSliceTest {
                 this.asto,
                 new Config.FromYaml(
                     "my_repo",
-                    Yaml.createYamlMappingBuilder()
-                        .add("Architectures", "amd64")
-                        .add("Components", "main").build()
+                    UpdateSliceTest.SETTINGS
                 )
             ),
             new SliceHasResponse(
