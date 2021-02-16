@@ -24,6 +24,7 @@
 package com.artipie.debian.http;
 
 import com.amihaiemil.eoyaml.Yaml;
+import com.amihaiemil.eoyaml.YamlMapping;
 import com.artipie.asto.Content;
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
@@ -59,6 +60,13 @@ import org.junit.jupiter.api.Test;
 class UpdateSliceTest {
 
     /**
+     * Repository settings.
+     */
+    private static final YamlMapping SETTINGS = Yaml.createYamlMappingBuilder()
+        .add("Architectures", "amd64")
+        .add("Components", "main").build();
+
+    /**
      * Test storage.
      */
     private Storage asto;
@@ -75,23 +83,23 @@ class UpdateSliceTest {
             "Response is OK",
             new UpdateSlice(
                 this.asto,
-                new Config.FromYaml("my_repo", Yaml.createYamlMappingBuilder().build())
+                new Config.FromYaml("my_repo", UpdateSliceTest.SETTINGS)
             ),
             new SliceHasResponse(
                 new RsHasStatus(RsStatus.OK),
-                new RequestLine(RqMethod.PUT, "/main/aglfn_1.7-3_all.deb"),
+                new RequestLine(RqMethod.PUT, "/main/aglfn_1.7-3_amd64.deb"),
                 Headers.EMPTY,
-                new Content.From(new TestResource("aglfn_1.7-3_all.deb").asBytes())
+                new Content.From(new TestResource("aglfn_1.7-3_amd64.deb").asBytes())
             )
         );
         MatcherAssert.assertThat(
             "Packages index added",
-            this.asto.exists(new Key.From("dists/my_repo/main/binary-all/Packages.gz")).join(),
+            this.asto.exists(new Key.From("dists/my_repo/main/binary-amd64/Packages.gz")).join(),
             new IsEqual<>(true)
         );
         MatcherAssert.assertThat(
             "Debian package added",
-            this.asto.exists(new Key.From("main/aglfn_1.7-3_all.deb")).join(),
+            this.asto.exists(new Key.From("main/aglfn_1.7-3_amd64.deb")).join(),
             new IsEqual<>(true)
         );
     }
@@ -99,24 +107,27 @@ class UpdateSliceTest {
     @Test
     void uploadsAndUpdatesIndex() throws IOException {
         this.asto.save(new Key.From("dists/deb_repo/Release"), Content.EMPTY);
-        final String key = "dists/deb_repo/main/binary-all/Packages.gz";
+        final String key = "dists/deb_repo/main/binary-amd64/Packages.gz";
         new TestResource("Packages.gz").saveTo(this.asto, new Key.From(key));
         MatcherAssert.assertThat(
             "Response is OK",
             new UpdateSlice(
                 this.asto,
-                new Config.FromYaml("deb_repo", Yaml.createYamlMappingBuilder().build())
+                new Config.FromYaml(
+                    "deb_repo",
+                    UpdateSliceTest.SETTINGS
+                )
             ),
             new SliceHasResponse(
                 new RsHasStatus(RsStatus.OK),
-                new RequestLine(RqMethod.PUT, "/main/cm-super_0.3.4-14_all.deb"),
+                new RequestLine(RqMethod.PUT, "/main/libobus-ocaml_1.2.3-1+b3_amd64.deb"),
                 Headers.EMPTY,
-                new Content.From(new TestResource("cm-super_0.3.4-14_all.deb").asBytes())
+                new Content.From(new TestResource("libobus-ocaml_1.2.3-1+b3_amd64.deb").asBytes())
             )
         );
         MatcherAssert.assertThat(
             "Debian package added",
-            this.asto.exists(new Key.From("main/cm-super_0.3.4-14_all.deb")).join(),
+            this.asto.exists(new Key.From("main/libobus-ocaml_1.2.3-1+b3_amd64.deb")).join(),
             new IsEqual<>(true)
         );
         MatcherAssert.assertThat(
@@ -125,9 +136,34 @@ class UpdateSliceTest {
                 new ListOf<String>(
                     "Package: aglfn",
                     "Package: pspp",
-                    "Package: cm-super"
+                    "Package: libobus-ocaml"
                 )
             )
+        );
+    }
+
+    @Test
+    void returnsBadRequestAndRemovesItem() {
+        MatcherAssert.assertThat(
+            "Response is bad request",
+            new UpdateSlice(
+                this.asto,
+                new Config.FromYaml(
+                    "my_repo",
+                    UpdateSliceTest.SETTINGS
+                )
+            ),
+            new SliceHasResponse(
+                new RsHasStatus(RsStatus.BAD_REQUEST),
+                new RequestLine(RqMethod.PUT, "/main/aglfn_1.7-3_all.deb"),
+                Headers.EMPTY,
+                new Content.From(new TestResource("aglfn_1.7-3_all.deb").asBytes())
+            )
+        );
+        MatcherAssert.assertThat(
+            "Debian package was not added",
+            this.asto.exists(new Key.From("main/aglfn_1.7-3_all.deb")).join(),
+            new IsEqual<>(false)
         );
     }
 
@@ -137,7 +173,10 @@ class UpdateSliceTest {
             "Response is internal error",
             new UpdateSlice(
                 this.asto,
-                new Config.FromYaml("my_repo", Yaml.createYamlMappingBuilder().build())
+                new Config.FromYaml(
+                    "my_repo",
+                    UpdateSliceTest.SETTINGS
+                )
             ),
             new SliceHasResponse(
                 new RsHasStatus(RsStatus.INTERNAL_ERROR),
