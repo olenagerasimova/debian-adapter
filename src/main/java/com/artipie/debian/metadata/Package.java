@@ -26,17 +26,14 @@ package com.artipie.debian.metadata;
 import com.artipie.asto.Content;
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
-import com.artipie.asto.ext.PublisherAs;
-import java.io.BufferedInputStream;
+import com.artipie.debian.misc.PublisherAsArchive;
 import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 
 /**
@@ -87,9 +84,13 @@ public interface Package {
                     final CompletionStage<byte[]> res;
                     if (exists) {
                         res = this.asto.value(index).thenCompose(
-                            content -> new PublisherAs(content).bytes()
+                            content -> new PublisherAsArchive(content).unpackedGz()
                         ).thenApply(
-                            bytes -> Asto.unpackAppendCompress(bytes, item)
+                            bytes -> Asto.compress(
+                                bytes,
+                                "\n\n".getBytes(StandardCharsets.UTF_8),
+                                item.getBytes(StandardCharsets.UTF_8)
+                            )
                         );
                     } else {
                         res = CompletableFuture.completedFuture(
@@ -104,43 +105,17 @@ public interface Package {
         }
 
         /**
-         * Unpacks Packages index file, appends new item and compress the file.
-         * @param content Packages file bytes
-         * @param item Item to add
-         * @return Packages file bytes with added item
-         */
-        @SuppressWarnings("PMD.AssignmentInOperand")
-        private static byte[] unpackAppendCompress(final byte[] content, final String item) {
-            try (
-                GzipCompressorInputStream gcis = new GzipCompressorInputStream(
-                    new BufferedInputStream(new ByteArrayInputStream(content))
-                )
-            ) {
-                final ByteArrayOutputStream out = new ByteArrayOutputStream();
-                // @checkstyle MagicNumberCheck (1 line)
-                final byte[] buf = new byte[1024];
-                int cnt;
-                while (-1 != (cnt = gcis.read(buf))) {
-                    out.write(buf, 0, cnt);
-                }
-                out.write("\n\n".getBytes(StandardCharsets.UTF_8));
-                out.write(item.getBytes(StandardCharsets.UTF_8));
-                return Asto.compress(out.toByteArray());
-            } catch (final IOException ex) {
-                throw new UncheckedIOException(ex);
-            }
-        }
-
-        /**
          * Compress bytes in gz format.
          * @param bytes Bytes to pack
          * @return Compressed bytes
          */
-        private static byte[] compress(final byte[] bytes) {
+        private static byte[] compress(final byte[]... bytes) {
             final ByteArrayOutputStream baos = new ByteArrayOutputStream();
             try (GzipCompressorOutputStream gcos =
                 new GzipCompressorOutputStream(new BufferedOutputStream(baos))) {
-                gcos.write(bytes);
+                for (final byte[] item : bytes) {
+                    gcos.write(item);
+                }
             } catch (final IOException ex) {
                 throw new UncheckedIOException(ex);
             }
