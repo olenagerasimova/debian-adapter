@@ -40,7 +40,7 @@ import org.reactivestreams.Publisher;
  * Publisher as extension to work with archives.
  * @since 0.3
  */
-public final class PublisherAs {
+public final class PublisherAsArchive {
 
     /**
      * Publisher.
@@ -51,7 +51,7 @@ public final class PublisherAs {
      * Ctor.
      * @param content Content
      */
-    public PublisherAs(final Publisher<ByteBuffer> content) {
+    public PublisherAsArchive(final Publisher<ByteBuffer> content) {
         this.content = content;
     }
 

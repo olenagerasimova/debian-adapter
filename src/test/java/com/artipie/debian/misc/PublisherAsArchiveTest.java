@@ -34,10 +34,10 @@ import org.hamcrest.core.IsEqual;
 import org.junit.jupiter.api.Test;
 
 /**
- * Test for {@link PublisherAs}.
+ * Test for {@link PublisherAsArchive}.
  * @since 0.3
  */
-class PublisherAsTest {
+class PublisherAsArchiveTest {
 
     @Test
     void unpacksContent() throws IOException {
@@ -48,7 +48,7 @@ class PublisherAsTest {
             gcos.write(bytes);
         }
         MatcherAssert.assertThat(
-            new PublisherAs(new Content.From(baos.toByteArray()))
+            new PublisherAsArchive(new Content.From(baos.toByteArray()))
                 .unpackedGz().toCompletableFuture().join(),
             new IsEqual<>(bytes)
         );
