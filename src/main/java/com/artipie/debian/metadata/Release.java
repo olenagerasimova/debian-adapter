@@ -32,6 +32,7 @@ import com.artipie.asto.ext.Digests;
 import com.artipie.asto.ext.PublisherAs;
 import com.artipie.asto.rx.RxStorageWrapper;
 import com.artipie.debian.Config;
+import com.artipie.debian.misc.PublisherAsArchive;
 import hu.akarnokd.rxjava2.interop.SingleInterop;
 import io.reactivex.Observable;
 import java.nio.charset.StandardCharsets;
@@ -39,12 +40,17 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.CompletionStage;
 import java.util.regex.Pattern;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.cactoos.map.MapEntry;
 
 /**
  * Release metadata file.
  * @since 0.2
+ * @checkstyle ClassDataAbstractionCouplingCheck (500 lines)
  */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public interface Release {
 
     /**
@@ -120,29 +126,18 @@ public interface Release {
         @Override
         public CompletionStage<Void> update(final Key pckg) {
             final String key = pckg.string().replace(this.subDir(), "");
-            return this.asto.value(pckg).thenCompose(
-                content -> new ContentDigest(content, Digests.SHA256).hex()
-            ).thenCompose(
-                hex -> this.asto.value(this.key()).thenCompose(
+            return this.packageData(pckg).thenCompose(
+                pair -> this.asto.value(this.key()).thenCompose(
                     content -> new PublisherAs(content).asciiString().thenApply(
-                        str -> {
-                            final String res;
-                            if (str.contains(key)) {
-                                res = str.replaceAll(
-                                    String.format(" .* %s\n", Pattern.quote(key)),
-                                    String.format(" %s %s\n", hex, key)
-                                );
-                            } else {
-                                res = String.format("%s\n %s %s", str, hex, key);
-                            }
-                            return res;
-                        }
-                    ).thenCompose(
-                        str -> this.asto.save(
-                            this.key(),
-                            new Content.From(str.getBytes(StandardCharsets.UTF_8))
-                        )
+                        str -> Asto.addReplace(str, key, pair.getLeft())
+                    ).thenApply(
+                        str -> Asto.addReplace(str, key.replace(".gz", ""), pair.getRight())
                     )
+                )
+            ).thenCompose(
+                str -> this.asto.save(
+                    this.key(),
+                    new Content.From(str.getBytes(StandardCharsets.UTF_8))
                 )
             );
         }
@@ -182,6 +177,58 @@ public interface Release {
                 )
                 .map(StringBuilder::toString)
                 .to(SingleInterop.get());
+        }
+
+        /**
+         * Calculates lines of the following format
+         *  sha256 size relative_path.gz
+         *  sha256 size relative_path
+         * for the Package index file.
+         * @param pkg Package key
+         * @return Pair of lines for Package index
+         */
+        private CompletionStage<Pair<String, String>> packageData(final Key pkg) {
+            final String key = pkg.string().replace(this.subDir(), "");
+            return this.asto.value(pkg).thenCompose(
+                content -> new ContentDigest(content, Digests.SHA256).hex()
+            ).thenCompose(
+                hex -> this.asto.value(pkg).thenCompose(
+                    content -> new PublisherAsArchive(content).unpackedGz().thenApply(
+                        bytes -> new ImmutablePair<>(
+                            String.format(
+                                " %s %d %s", hex,
+                                content.size().orElseThrow(
+                                    () -> new IllegalStateException("Content size unknown")
+                                ),
+                                key
+                            ),
+                            String.format(
+                                " %s %d %s",
+                                DigestUtils.sha256Hex(bytes), bytes.length, key.replace(".gz", "")
+                            )
+                        )
+                    )
+                )
+            );
+        }
+
+        /**
+         * Adds or replaces Package index line in Release index.
+         * @param origin Release index
+         * @param key Package index relative path
+         * @param repl Replacement
+         * @return Corrected Release index
+         */
+        private static String addReplace(final String origin, final String key, final String repl) {
+            final String res;
+            if (origin.contains(String.format("%s\n", key)) || origin.endsWith(key)) {
+                res = origin.replaceAll(
+                    String.format(" .* %s(\n|$)", Pattern.quote(key)), String.format("%s\n", repl)
+                );
+            } else {
+                res = String.format("%s\n%s", origin, repl);
+            }
+            return res.replaceAll("\n+", "\n");
         }
     }
 }
