@@ -29,6 +29,7 @@ import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
 import com.artipie.asto.ext.PublisherAs;
 import com.artipie.asto.memory.InMemoryStorage;
+import com.artipie.asto.test.TestResource;
 import com.artipie.debian.Config;
 import com.artipie.http.slice.KeyFromPath;
 import java.io.BufferedOutputStream;
@@ -66,12 +67,10 @@ class ReleaseAstoTest {
 
     @Test
     void createsReleaseFile() {
-        this.asto.save(
-            new Key.From("dists/abc/main/binaty-amd64/Packages.gz"), Content.EMPTY
-        ).join();
-        this.asto.save(
-            new Key.From("dists/abc/main/binaty-intel/Packages.gz"), Content.EMPTY
-        ).join();
+        new TestResource("Packages.gz")
+            .saveTo(this.asto, new Key.From("dists/abc/main/binary-amd64/Packages.gz"));
+        new TestResource("Packages.gz")
+            .saveTo(this.asto, new Key.From("dists/abc/main/binary-intel/Packages.gz"));
         new Release.Asto(
             this.asto,
             new Config.FromYaml(
@@ -97,8 +96,40 @@ class ReleaseAstoTest {
                         "SHA256:"
                     )
                 ),
-                new StringContains("main/binaty-amd64/Packages.gz"),
-                new StringContains("main/binaty-intel/Packages.gz")
+                // @checkstyle LineLengthCheck (4 lines)
+                new StringContains(" eb8cb7a51d9fe47bde0a32a310b93c01dba531c6f8d14362552f65fcc4277af8 1351 main/binary-amd64/Packages.gz\n"),
+                new StringContains(" c1cfc96b4ca50645c57e10b65fcc89fd1b2b79eb495c9fa035613af7ff97dbff 2564 main/binary-amd64/Packages\n"),
+                new StringContains(" eb8cb7a51d9fe47bde0a32a310b93c01dba531c6f8d14362552f65fcc4277af8 1351 main/binary-intel/Packages.gz\n"),
+                new StringContains(" c1cfc96b4ca50645c57e10b65fcc89fd1b2b79eb495c9fa035613af7ff97dbff 2564 main/binary-intel/Packages\n")
+            )
+        );
+    }
+
+    @Test
+    void createsReleaseWhenNoPackagesExist() {
+        new Release.Asto(
+            this.asto,
+            new Config.FromYaml(
+                "my-super-deb",
+                Optional.of(
+                    Yaml.createYamlMappingBuilder()
+                        .add("Components", "main")
+                        .add("Architectures", "arm")
+                        .build()
+                )
+            )
+        ).create().toCompletableFuture().join();
+        MatcherAssert.assertThat(
+            new PublisherAs(this.asto.value(new KeyFromPath("dists/my-super-deb/Release")).join())
+                .asciiString().toCompletableFuture().join(),
+            new StringContainsInOrder(
+                new ListOf<String>(
+                    "Codename: my-super-deb",
+                    "Architectures: arm",
+                    "Components: main",
+                    "Date:",
+                    "SHA256:"
+                )
             )
         );
     }

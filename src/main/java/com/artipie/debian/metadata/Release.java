@@ -26,13 +26,12 @@ package com.artipie.debian.metadata;
 import com.artipie.asto.Content;
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
-import com.artipie.asto.SubStorage;
 import com.artipie.asto.ext.ContentDigest;
 import com.artipie.asto.ext.Digests;
 import com.artipie.asto.ext.PublisherAs;
 import com.artipie.asto.rx.RxStorageWrapper;
 import com.artipie.debian.Config;
-import com.artipie.debian.misc.PublisherAsArchive;
+import com.artipie.debian.misc.UnpackedContent;
 import hu.akarnokd.rxjava2.interop.SingleInterop;
 import io.reactivex.Observable;
 import java.nio.charset.StandardCharsets;
@@ -40,10 +39,8 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.CompletionStage;
 import java.util.regex.Pattern;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.cactoos.map.MapEntry;
 
 /**
  * Release metadata file.
@@ -160,20 +157,15 @@ public interface Release {
          * @return Checksums future
          */
         private CompletionStage<String> checksums() {
-            final SubStorage sub = new SubStorage(new Key.From(this.subDir()), this.asto);
-            final RxStorageWrapper rxsto = new RxStorageWrapper(sub);
+            final RxStorageWrapper rxsto = new RxStorageWrapper(this.asto);
             return rxsto.list(Key.ROOT).flatMapObservable(Observable::fromIterable)
                 .filter(key -> key.string().endsWith("Packages.gz"))
                 .flatMapSingle(
-                    item -> SingleInterop.fromFuture(
-                        sub.value(item).thenCompose(
-                            content -> new ContentDigest(content, Digests.SHA256).hex()
-                        ).thenApply(hash -> new MapEntry<>(item, hash))
-                    )
+                    item -> SingleInterop.fromFuture(this.packageData(item))
                 ).collect(
                     StringBuilder::new,
-                    (builder, hash) -> builder.append(" ").append(hash.getValue())
-                        .append(" ").append(hash.getKey().string()).append("\n")
+                    (builder, pair) -> builder.append(pair.getKey()).append("\n")
+                        .append(pair.getValue()).append("\n")
                 )
                 .map(StringBuilder::toString)
                 .to(SingleInterop.get());
@@ -193,8 +185,8 @@ public interface Release {
                 content -> new ContentDigest(content, Digests.SHA256).hex()
             ).thenCompose(
                 hex -> this.asto.value(pkg).thenCompose(
-                    content -> new PublisherAsArchive(content).unpackedGz().thenApply(
-                        bytes -> new ImmutablePair<>(
+                    content -> new UnpackedContent(content).sizeAndDigest().thenApply(
+                        data -> new ImmutablePair<>(
                             String.format(
                                 " %s %d %s", hex,
                                 content.size().orElseThrow(
@@ -204,7 +196,7 @@ public interface Release {
                             ),
                             String.format(
                                 " %s %d %s",
-                                DigestUtils.sha256Hex(bytes), bytes.length, key.replace(".gz", "")
+                                data.getValue(), data.getKey(), key.replace(".gz", "")
                             )
                         )
                     )
