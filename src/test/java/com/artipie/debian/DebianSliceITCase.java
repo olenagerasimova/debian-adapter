@@ -171,9 +171,6 @@ public final class DebianSliceITCase {
                 // @checkstyle LineLengthCheck (2 lines)
                 new MatchesPattern(Pattern.compile("[\\S\\s]*Get:2 http://host.testcontainers.internal:\\d+ artipie Release[\\S\\s]*")),
                 new MatchesPattern(Pattern.compile("[\\S\\s]*Get:4 http://host.testcontainers.internal:\\d+ artipie/main amd64 Packages \\[1351 B][\\S\\s]*")),
-                new StringContainsInOrder(
-                    new ListOf<String>("Fetched 1656 B in", "Reading package lists...")
-                ),
                 new IsNot<>(new StringContains("Get:5"))
             )
         );
