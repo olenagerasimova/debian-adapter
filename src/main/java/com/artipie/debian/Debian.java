@@ -46,25 +46,7 @@ public interface Debian {
     CompletionStage<Void> updatePackages(List<Key> debs, Key packages);
 
     /**
-     * Updates Release index file by adding information about Packages index file and generate
-     * corresponding Release.gpg file with the GPG signature. Find more information in the
-     * <a href="https://wiki.debian.org/DebianRepository/Format#A.22Release.22_files">documentation</a>.
-     * @param packages Packages index file to add info about
-     * @return Completion action
-     */
-    CompletionStage<Void> updateRelease(Key packages);
-
-    /**
-     * Updates InRelease index file by adding information about Packages index file and signs the
-     * file with the GPG signature. Find more information in the
-     * <a href="https://wiki.debian.org/DebianRepository/Format#A.22Release.22_files">documentation</a>.
-     * @param packages Packages index file to add info about
-     * @return Completion action
-     */
-    CompletionStage<Void> updateInRelease(Key packages);
-
-    /**
-     * Generates Release index file and corresponding Release.gpg file with the GPG
+     * Generates or updates Release index file and corresponding Release.gpg file with the GPG
      * signature. Find more information in the
      * <a href="https://wiki.debian.org/DebianRepository/Format#A.22Release.22_files">documentation</a>.
      * @return Completion action
@@ -72,7 +54,7 @@ public interface Debian {
     CompletionStage<Void> generateRelease();
 
     /**
-     * Generates InRelease index file and signs it with a GPG clearsign signature. Check
+     * Generates or updates InRelease index file and signs it with a GPG clearsign signature. Check
      * <a href="https://wiki.debian.org/DebianRepository/Format#A.22Release.22_files">documentation</a>
      * for more details.
      * @return Completion action
@@ -108,16 +90,6 @@ public interface Debian {
         @Override
         public CompletionStage<Void> updatePackages(final List<Key> debs, final Key packages) {
             throw new NotImplementedException("Not yet implemented");
-        }
-
-        @Override
-        public CompletionStage<Void> updateRelease(final Key packages) {
-            throw new NotImplementedException("Will be implemented letter");
-        }
-
-        @Override
-        public CompletionStage<Void> updateInRelease(final Key packages) {
-            throw new NotImplementedException("Will be implemented some day");
         }
 
         @Override
