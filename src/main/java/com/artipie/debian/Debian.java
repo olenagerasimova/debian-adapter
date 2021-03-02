@@ -37,7 +37,8 @@ public interface Debian {
 
     /**
      * Updates or creates Packages index file by adding information about provided
-     * packages list.
+     * packages list. For mo information about Packages index file check the
+     * <a href="https://wiki.debian.org/DebianRepository/Format#A.22Packages.22_Indices">documentation</a>.
      * @param debs Packages '.deb' list to add
      * @param packages Packages index file
      * @return Completion action
@@ -45,13 +46,17 @@ public interface Debian {
     CompletionStage<Void> updatePackages(List<Key> debs, Key packages);
 
     /**
-     * Generates or updates Release index file and corresponding GPG signature.
+     * Generates or updates Release index file and corresponding Release.gpg file with the GPG
+     * signature. Find more information in the
+     * <a href="https://wiki.debian.org/DebianRepository/Format#A.22Release.22_files">documentation</a>.
      * @return Completion action
      */
     CompletionStage<Void> generateRelease();
 
     /**
-     * Generates or updates Release index file and signs it with GPG.
+     * Generates or updates InRelease index file and signs it with a GPG clearsign signature. Check
+     * <a href="https://wiki.debian.org/DebianRepository/Format#A.22Release.22_files">documentation</a>
+     * for more details.
      * @return Completion action
      */
     CompletionStage<Void> generateInRelease();
