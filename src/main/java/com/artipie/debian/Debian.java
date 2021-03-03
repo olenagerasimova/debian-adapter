@@ -46,20 +46,32 @@ public interface Debian {
     CompletionStage<Void> updatePackages(List<Key> debs, Key packages);
 
     /**
-     * Generates or updates Release index file and corresponding Release.gpg file with the GPG
-     * signature. Find more information in the
+     * Updates Release index file by adding information about Packages index file and generate
+     * corresponding Release.gpg file with the GPG signature. Find more information in the
      * <a href="https://wiki.debian.org/DebianRepository/Format#A.22Release.22_files">documentation</a>.
-     * @return Completion action
+     * @param packages Packages index file to add info about
+     * @return Completion action with the key of the generated index
      */
-    CompletionStage<Void> generateRelease();
+    CompletionStage<Key> updateRelease(Key packages);
 
     /**
-     * Generates or updates InRelease index file and signs it with a GPG clearsign signature. Check
+     * Generates Release index file and corresponding Release.gpg file with the GPG
+     * signature. Find more information in the
+     * <a href="https://wiki.debian.org/DebianRepository/Format#A.22Release.22_files">documentation</a>.
+     * @return Completion action with the key of the generated index
+     */
+    CompletionStage<Key> generateRelease();
+
+    /**
+     * Generates InRelease index file and signs it with a GPG clearsign signature. Process is based
+     * on provided Release index file, essentially this method signs provided Release index and
+     * generate corresponding file. Check
      * <a href="https://wiki.debian.org/DebianRepository/Format#A.22Release.22_files">documentation</a>
      * for more details.
+     * @param release Release index file key
      * @return Completion action
      */
-    CompletionStage<Void> generateInRelease();
+    CompletionStage<Void> generateInRelease(Key release);
 
     /**
      * Implementation of {@link Debian} from abstract storage.
@@ -93,12 +105,17 @@ public interface Debian {
         }
 
         @Override
-        public CompletionStage<Void> generateRelease() {
+        public CompletionStage<Key> updateRelease(final Key packages) {
+            throw new NotImplementedException("Will be implemented letter");
+        }
+
+        @Override
+        public CompletionStage<Key> generateRelease() {
             throw new NotImplementedException("Not implemented yet");
         }
 
         @Override
-        public CompletionStage<Void> generateInRelease() {
+        public CompletionStage<Void> generateInRelease(final Key release) {
             throw new NotImplementedException("To be implemented");
         }
     }
