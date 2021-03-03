@@ -50,34 +50,28 @@ public interface Debian {
      * corresponding Release.gpg file with the GPG signature. Find more information in the
      * <a href="https://wiki.debian.org/DebianRepository/Format#A.22Release.22_files">documentation</a>.
      * @param packages Packages index file to add info about
-     * @return Completion action
+     * @return Completion action with the key of the generated index
      */
-    CompletionStage<Void> updateRelease(Key packages);
-
-    /**
-     * Updates InRelease index file by adding information about Packages index file and signs the
-     * file with the GPG signature. Find more information in the
-     * <a href="https://wiki.debian.org/DebianRepository/Format#A.22Release.22_files">documentation</a>.
-     * @param packages Packages index file to add info about
-     * @return Completion action
-     */
-    CompletionStage<Void> updateInRelease(Key packages);
+    CompletionStage<Key> updateRelease(Key packages);
 
     /**
      * Generates Release index file and corresponding Release.gpg file with the GPG
      * signature. Find more information in the
      * <a href="https://wiki.debian.org/DebianRepository/Format#A.22Release.22_files">documentation</a>.
-     * @return Completion action
+     * @return Completion action with the key of the generated index
      */
-    CompletionStage<Void> generateRelease();
+    CompletionStage<Key> generateRelease();
 
     /**
-     * Generates InRelease index file and signs it with a GPG clearsign signature. Check
+     * Generates InRelease index file and signs it with a GPG clearsign signature. Process is based
+     * on provided Release index file, essentially this method signs provided Release index and
+     * generate corresponding file. Check
      * <a href="https://wiki.debian.org/DebianRepository/Format#A.22Release.22_files">documentation</a>
      * for more details.
+     * @param release Release index file key
      * @return Completion action
      */
-    CompletionStage<Void> generateInRelease();
+    CompletionStage<Void> generateInRelease(Key release);
 
     /**
      * Implementation of {@link Debian} from abstract storage.
@@ -111,22 +105,17 @@ public interface Debian {
         }
 
         @Override
-        public CompletionStage<Void> updateRelease(final Key packages) {
+        public CompletionStage<Key> updateRelease(final Key packages) {
             throw new NotImplementedException("Will be implemented letter");
         }
 
         @Override
-        public CompletionStage<Void> updateInRelease(final Key packages) {
-            throw new NotImplementedException("Will be implemented some day");
-        }
-
-        @Override
-        public CompletionStage<Void> generateRelease() {
+        public CompletionStage<Key> generateRelease() {
             throw new NotImplementedException("Not implemented yet");
         }
 
         @Override
-        public CompletionStage<Void> generateInRelease() {
+        public CompletionStage<Void> generateInRelease(final Key release) {
             throw new NotImplementedException("To be implemented");
         }
     }
