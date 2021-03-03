@@ -34,6 +34,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
@@ -47,11 +48,11 @@ public interface Package {
 
     /**
      * Adds item to the packages index.
-     * @param item Index item to add
+     * @param items Index items to add
      * @param index Package index key
      * @return Completion action
      */
-    CompletionStage<Void> add(String item, Key index);
+    CompletionStage<Void> add(List<String> items, Key index);
 
     /**
      * Simple {@link Package} implementation: it appends item to the index without any validation.
@@ -61,28 +62,26 @@ public interface Package {
     final class Asto implements Package {
 
         /**
+         * Package index items separator.
+         */
+        private static final String SEP = "\n\n";
+
+        /**
          * Abstract storage.
          */
         private final Storage asto;
 
         /**
-         * Repository Release index.
-         */
-        private final Release release;
-
-        /**
          * Ctor.
          * @param asto Storage
-         * @param release Repository Release index
          */
-        public Asto(final Storage asto, final Release release) {
+        public Asto(final Storage asto) {
             this.asto = asto;
-            this.release = release;
         }
 
         @Override
-        public CompletionStage<Void> add(final String item, final Key index) {
-            final byte[] bytes = item.getBytes(StandardCharsets.UTF_8);
+        public CompletionStage<Void> add(final List<String> items, final Key index) {
+            final byte[] bytes = String.join(Asto.SEP, items).getBytes(StandardCharsets.UTF_8);
             return this.asto.exists(index).thenCompose(
                 exists -> {
                     final CompletionStage<byte[]> res;
@@ -90,10 +89,7 @@ public interface Package {
                         res = this.asto.value(index).thenCompose(
                             content -> new PublisherAs(content).bytes()
                         ).thenApply(
-                            buffer -> Asto.decompressAppendCompress(
-                                buffer,
-                                String.format("\n\n%s", item).getBytes(StandardCharsets.UTF_8)
-                            )
+                            buffer -> Asto.decompressAppendCompress(buffer, bytes)
                         );
                     } else {
                         res = CompletableFuture.completedFuture(compress(bytes));
@@ -101,8 +97,7 @@ public interface Package {
                     return res;
                 }
             )
-                .thenCompose(res -> this.asto.save(index, new Content.From(res)))
-                .thenCompose(nothing -> this.release.update(index));
+                .thenCompose(res -> this.asto.save(index, new Content.From(res)));
         }
 
         /**
@@ -129,6 +124,7 @@ public interface Package {
                 while (-1 != (cnt = gcis.read(buf))) {
                     gcos.write(buf, 0, cnt);
                 }
+                gcos.write(Asto.SEP.getBytes(StandardCharsets.UTF_8));
                 gcos.write(append);
             } catch (final IOException err) {
                 throw new UncheckedIOException(err);

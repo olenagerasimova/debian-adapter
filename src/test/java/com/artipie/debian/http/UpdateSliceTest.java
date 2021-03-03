@@ -46,6 +46,7 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.cactoos.list.ListOf;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.IsEqual;
+import org.hamcrest.core.IsNot;
 import org.hamcrest.text.StringContainsInOrder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -78,7 +79,8 @@ class UpdateSliceTest {
 
     @Test
     void uploadsAndCreatesIndex() {
-        this.asto.save(new Key.From("dists/my_repo/Release"), Content.EMPTY);
+        final Key.From release = new Key.From("dists/my_repo/Release");
+        this.asto.save(release, Content.EMPTY).join();
         MatcherAssert.assertThat(
             "Response is OK",
             new UpdateSlice(
@@ -102,11 +104,18 @@ class UpdateSliceTest {
             this.asto.exists(new Key.From("main/aglfn_1.7-3_amd64.deb")).join(),
             new IsEqual<>(true)
         );
+        MatcherAssert.assertThat(
+            "Release index updated",
+            this.asto.value(release)
+                .join().size().get(),
+            new IsNot<>(new IsEqual<>(0L))
+        );
     }
 
     @Test
     void uploadsAndUpdatesIndex() throws IOException {
-        this.asto.save(new Key.From("dists/deb_repo/Release"), Content.EMPTY);
+        final Key.From release = new Key.From("dists/deb_repo/Release");
+        this.asto.save(release, Content.EMPTY).join();
         final String key = "dists/deb_repo/main/binary-amd64/Packages.gz";
         new TestResource("Packages.gz").saveTo(this.asto, new Key.From(key));
         MatcherAssert.assertThat(
@@ -139,6 +148,11 @@ class UpdateSliceTest {
                     "Package: libobus-ocaml"
                 )
             )
+        );
+        MatcherAssert.assertThat(
+            "Release index updated",
+            this.asto.value(release).join().size().get(),
+            new IsNot<>(new IsEqual<>(0L))
         );
     }
 
