@@ -24,8 +24,6 @@
 package com.artipie.debian.misc;
 
 import com.artipie.asto.test.TestResource;
-import java.io.IOException;
-import org.bouncycastle.openpgp.PGPException;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.hamcrest.core.StringContains;
@@ -35,20 +33,39 @@ import org.junit.jupiter.api.Test;
  * Test for {@link GpgClearsign}.
  * @since 0.4
  */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class GpgClearsignTest {
 
     @Test
-    void signs() throws IOException, PGPException {
+    void signs() {
         final byte[] release = new TestResource("Release").asBytes();
-        final byte[] res = new GpgClearsign(release)
-            .signature(new TestResource("secret-keys.gpg").asBytes(), "1q2w3e4r5t6y7u");
+        final String res = new String(
+            new GpgClearsign(release)
+            .signedContent(new TestResource("secret-keys.gpg").asBytes(), "1q2w3e4r5t6y7u")
+        );
         MatcherAssert.assertThat(
             "Contains original file and signature",
-            new String(res),
+            res,
             Matchers.allOf(
                 new StringContains(new String(release)),
                 new StringContains("-----BEGIN PGP SIGNED MESSAGE-----"),
                 new StringContains("Hash: SHA256"),
+                new StringContains("-----BEGIN PGP SIGNATURE-----"),
+                new StringContains("-----END PGP SIGNATURE-----")
+            )
+        );
+    }
+
+    @Test
+    void generatesSignature() {
+        final String res = new String(
+            new GpgClearsign(new TestResource("Release").asBytes())
+            .signature(new TestResource("secret-keys.gpg").asBytes(), "1q2w3e4r5t6y7u")
+        );
+        MatcherAssert.assertThat(
+            "Contains signature",
+            res,
+            Matchers.allOf(
                 new StringContains("-----BEGIN PGP SIGNATURE-----"),
                 new StringContains("-----END PGP SIGNATURE-----")
             )
