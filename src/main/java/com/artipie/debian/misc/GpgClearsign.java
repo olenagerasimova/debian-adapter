@@ -78,7 +78,7 @@ public final class GpgClearsign {
      * @param pass Password
      * @return File, signed with gpg
      */
-    byte[] signedContent(final byte[] key, final String pass) {
+    public byte[] signedContent(final byte[] key, final String pass) {
         try {
             final ByteArrayOutputStream out = new ByteArrayOutputStream();
             final ArmoredOutputStream armored = new ArmoredOutputStream(out);

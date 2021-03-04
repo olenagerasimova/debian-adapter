@@ -36,14 +36,13 @@ import com.artipie.http.slice.LoggingSlice;
 import com.artipie.vertx.VertxSliceServer;
 import com.jcabi.log.Logger;
 import io.vertx.reactivex.core.Vertx;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.regex.Pattern;
-import org.bouncycastle.openpgp.PGPException;
 import org.cactoos.list.ListOf;
+import org.hamcrest.Matcher;
 import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
+import org.hamcrest.core.AllOf;
 import org.hamcrest.core.IsNot;
 import org.hamcrest.core.StringContains;
 import org.hamcrest.text.MatchesPattern;
@@ -60,7 +59,7 @@ import org.testcontainers.containers.GenericContainer;
 
 /**
  * Test for {@link DebianSlice} with GPG-signature.
- * @since 0.1
+ * @since 0.4
  * @checkstyle ClassDataAbstractionCouplingCheck (500 lines)
  */
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
@@ -115,9 +114,8 @@ public final class DebianGpgSliceITCase {
         );
         final int port = this.server.start();
         Testcontainers.exposeHostPorts(port);
-        final Path setting = this.tmp.resolve("sources.list");
         Files.write(
-            setting,
+            this.tmp.resolve("sources.list"),
             String.format(
                 "deb http://host.testcontainers.internal:%d/ artipie main", port
             ).getBytes()
@@ -139,21 +137,25 @@ public final class DebianGpgSliceITCase {
         MatcherAssert.assertThat(
             "InRelease file is used on update the world",
             this.exec("apt-get", "update"),
-            Matchers.allOf(
-                // @checkstyle LineLengthCheck (2 lines)
-                new MatchesPattern(Pattern.compile("[\\S\\s]*Get:1 http://host.testcontainers.internal:\\d+ artipie InRelease[\\S\\s]*")),
-                new MatchesPattern(Pattern.compile("[\\S\\s]*Get:2 http://host.testcontainers.internal:\\d+ artipie/main amd64 Packages \\[1351 B][\\S\\s]*")),
-                new IsNot<>(new StringContains("Get:3"))
+            new AllOf<>(
+                new ListOf<Matcher<? super String>>(
+                    // @checkstyle LineLengthCheck (2 lines)
+                    new MatchesPattern(Pattern.compile("[\\S\\s]*Get:1 http://host.testcontainers.internal:\\d+ artipie InRelease[\\S\\s]*")),
+                    new MatchesPattern(Pattern.compile("[\\S\\s]*Get:2 http://host.testcontainers.internal:\\d+ artipie/main amd64 Packages \\[1351 B][\\S\\s]*")),
+                    new IsNot<>(new StringContains("Get:3"))
+                )
             )
         );
         MatcherAssert.assertThat(
             "Package was downloaded and unpacked",
             this.exec("apt-get", "install", "-y", "aglfn"),
-            Matchers.allOf(
-                // @checkstyle LineLengthCheck (1 line)
-                new MatchesPattern(Pattern.compile("[\\S\\s]*Get:1 http://host.testcontainers.internal:\\d+ artipie/main amd64 aglfn amd64 1.7-3 \\[29.9 kB][\\S\\s]*")),
-                new IsNot<>(new StringContains("Get:2")),
-                new StringContainsInOrder(new ListOf<>("Unpacking aglfn", "Setting up aglfn"))
+            new AllOf<>(
+                new ListOf<Matcher<? super String>>(
+                    // @checkstyle LineLengthCheck (1 line)
+                    new MatchesPattern(Pattern.compile("[\\S\\s]*Get:1 http://host.testcontainers.internal:\\d+ artipie/main amd64 aglfn amd64 1.7-3 \\[29.9 kB][\\S\\s]*")),
+                    new IsNot<>(new StringContains("Get:2")),
+                    new StringContainsInOrder(new ListOf<>("Unpacking aglfn", "Setting up aglfn"))
+                )
             )
         );
     }
@@ -164,14 +166,14 @@ public final class DebianGpgSliceITCase {
         this.cntn.stop();
     }
 
-    private void copyPackage(final String pkg) throws PGPException, IOException {
+    private void copyPackage(final String pkg) {
         new TestResource(pkg).saveTo(this.storage, new Key.From("main", pkg));
         new TestResource("Packages.gz")
             .saveTo(this.storage, new Key.From("dists/artipie/main/binary-amd64/Packages.gz"));
         this.storage.save(
             new Key.From("dists/artipie/InRelease"),
             new Content.From(
-                new GpgClearsign(new TestResource("Release").asBytes()).signature(
+                new GpgClearsign(new TestResource("Release").asBytes()).signedContent(
                     new TestResource("secret-keys.gpg").asBytes(), "1q2w3e4r5t6y7u"
                 )
             )
