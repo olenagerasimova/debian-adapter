@@ -55,7 +55,7 @@ import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
  *  The job can be performed in several steps, on the last iteration do not forget to remove this
  *  class from qulice exclusion.
  */
-final class GpgClearsign {
+public final class GpgClearsign {
 
     /**
      * Bytes content to sign.
@@ -66,7 +66,7 @@ final class GpgClearsign {
      * Ctor.
      * @param content Bytes content to sign
      */
-    GpgClearsign(final byte[] content) {
+    public GpgClearsign(final byte[] content) {
         this.content = content;
     }
 
@@ -78,7 +78,7 @@ final class GpgClearsign {
      * @throws PGPException On problems with signing
      * @throws IOException On error
      */
-    byte[] signature(final byte[] key, final String pass) throws PGPException, IOException {
+    public byte[] signature(final byte[] key, final String pass) throws PGPException, IOException {
         Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
         PGPSecretKey pgpSecKey = readSecretKey(new ByteArrayInputStream(key));
         PGPPrivateKey pgpPrivKey = pgpSecKey.extractPrivateKey(new JcePBESecretKeyDecryptorBuilder().setProvider("BC").build(pass.toCharArray()));
