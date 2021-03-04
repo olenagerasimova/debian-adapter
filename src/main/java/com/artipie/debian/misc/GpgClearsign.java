@@ -23,12 +23,14 @@
  */
 package com.artipie.debian.misc;
 
+import com.jcabi.log.Logger;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.security.Security;
 import java.util.Iterator;
 import org.bouncycastle.bcpg.ArmoredOutputStream;
@@ -71,50 +73,120 @@ final class GpgClearsign {
     }
 
     /**
-     * Signs content with GPG signature using.
+     * Signs content with GPG clearsign signature and returns it along with the signature.
      * @param key Private key bytes
      * @param pass Password
      * @return File, signed with gpg
-     * @throws PGPException On problems with signing
-     * @throws IOException On error
      */
-    byte[] signature(final byte[] key, final String pass) throws PGPException, IOException {
-        Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
-        PGPSecretKey pgpSecKey = readSecretKey(new ByteArrayInputStream(key));
-        PGPPrivateKey pgpPrivKey = pgpSecKey.extractPrivateKey(new JcePBESecretKeyDecryptorBuilder().setProvider("BC").build(pass.toCharArray()));
-        PGPSignatureGenerator sGen = new PGPSignatureGenerator(new JcaPGPContentSignerBuilder(pgpSecKey.getPublicKey().getAlgorithm(), PGPUtil.SHA256).setProvider("BC"));
-        PGPSignatureSubpacketGenerator spGen = new PGPSignatureSubpacketGenerator();
-        sGen.init(PGPSignature.CANONICAL_TEXT_DOCUMENT, pgpPrivKey);
-        Iterator<String> it = pgpSecKey.getPublicKey().getUserIDs();
-        if (it.hasNext()) {
-            spGen.setSignerUserID(false, it.next());
-            sGen.setHashedSubpackets(spGen.generate());
-        }
-        InputStream fIn = new BufferedInputStream(new ByteArrayInputStream(content));
-        final ByteArrayOutputStream out = new ByteArrayOutputStream();
-        ArmoredOutputStream aOut = new ArmoredOutputStream(out);
-        aOut.beginClearText(PGPUtil.SHA256);
-        ByteArrayOutputStream lineOut = new ByteArrayOutputStream();
-        int lookAhead = readInputLine(lineOut, fIn);
-        processLine(aOut, sGen, lineOut.toByteArray());
-        if (lookAhead != -1) {
-            do {
-                lookAhead = readInputLine(lineOut, lookAhead, fIn);
-                sGen.update((byte)'\r');
-                sGen.update((byte)'\n');
-                processLine(aOut, sGen, lineOut.toByteArray());
+    byte[] signedContent(final byte[] key, final String pass) {
+        try {
+            final ByteArrayOutputStream out = new ByteArrayOutputStream();
+            final ArmoredOutputStream armored = new ArmoredOutputStream(out);
+            try (
+                final InputStream input = new BufferedInputStream(
+                    new ByteArrayInputStream(content)
+                );
+                final ByteArrayOutputStream line = new ByteArrayOutputStream()
+            ) {
+                final PGPSignatureGenerator sgen = prepareGenerator(key, pass);
+                armored.beginClearText(PGPUtil.SHA256);
+                int ahead = readInputLine(line, input);
+                processLine(armored, sgen, line.toByteArray());
+                if (ahead != -1) {
+                    do {
+                        ahead = readInputLine(line, ahead, input);
+                        sgen.update((byte) '\r');
+                        sgen.update((byte) '\n');
+                        processLine(armored, sgen, line.toByteArray());
+                    }
+                    while (ahead != -1);
+                }
+                armored.endClearText();
+                BCPGOutputStream bOut = new BCPGOutputStream(armored);
+                sgen.generate().encode(bOut);
+                armored.close();
+                return out.toByteArray();
             }
-            while (lookAhead != -1);
+        } catch (final PGPException err) {
+            Logger.error(this, "Error while generating gpg-signature:\n%s", err.getMessage());
+            throw new IllegalStateException(err);
+        } catch (final IOException err) {
+            Logger.error(this, "IO error while generating gpg-signature:\n%s", err.getMessage());
+            throw new UncheckedIOException(err);
         }
-        fIn.close();
-        aOut.endClearText();
-        BCPGOutputStream bOut = new BCPGOutputStream(aOut);
-        sGen.generate().encode(bOut);
-        aOut.close();
-        return out.toByteArray();
     }
 
-    static PGPSecretKey readSecretKey(InputStream input) throws IOException, PGPException {
+    /**
+     * Signs content with GPG clearsign signature and returns the signature.
+     * @param key Private key bytes
+     * @param pass Password
+     * @return File, signed with gpg
+     */
+    byte[] signature(final byte[] key, final String pass) {
+        try {
+            final ByteArrayOutputStream out = new ByteArrayOutputStream();
+            final ArmoredOutputStream armored = new ArmoredOutputStream(out);
+            try (
+                final InputStream input = new BufferedInputStream(
+                    new ByteArrayInputStream(this.content)
+                );
+                final ByteArrayOutputStream line = new ByteArrayOutputStream()) {
+                final PGPSignatureGenerator sgen = prepareGenerator(key, pass);
+                int ahead = readInputLine(line, input);
+                processLine(sgen, line.toByteArray());
+                if (ahead != -1) {
+                    do {
+                        ahead = readInputLine(line, ahead, input);
+                        sgen.update((byte) '\r');
+                        sgen.update((byte) '\n');
+                        processLine(sgen, line.toByteArray());
+                    }
+                    while (ahead != -1);
+                }
+                final BCPGOutputStream res = new BCPGOutputStream(armored);
+                sgen.generate().encode(res);
+                armored.close();
+                return out.toByteArray();
+            }
+        } catch (final PGPException err) {
+            Logger.error(this, "Error while generating gpg-signature:\n%s", err.getMessage());
+            throw new IllegalStateException(err);
+        } catch (final IOException err) {
+            Logger.error(this, "IO error while generating gpg-signature:\n%s", err.getMessage());
+            throw new UncheckedIOException(err);
+        }
+    }
+
+    /**
+     * Prepares signature generator.
+     * @param key Private key
+     * @param pass Password
+     * @return Instance of PGPSignatureGenerator
+     * @throws IOException On error
+     * @throws PGPException On problems with signing
+     */
+    private static PGPSignatureGenerator prepareGenerator(final byte[] key, final String pass)
+        throws IOException, PGPException {
+        Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+        final PGPSecretKey skey = readSecretKey(new ByteArrayInputStream(key));
+        final PGPPrivateKey pkey = skey.extractPrivateKey(
+            new JcePBESecretKeyDecryptorBuilder().setProvider("BC").build(pass.toCharArray())
+        );
+        final PGPSignatureGenerator sgen = new PGPSignatureGenerator(
+            new JcaPGPContentSignerBuilder(skey.getPublicKey().getAlgorithm(), PGPUtil.SHA256)
+                .setProvider("BC")
+        );
+        final PGPSignatureSubpacketGenerator ssgen = new PGPSignatureSubpacketGenerator();
+        sgen.init(PGPSignature.CANONICAL_TEXT_DOCUMENT, pkey);
+        final Iterator<String> it = skey.getPublicKey().getUserIDs();
+        if (it.hasNext()) {
+            ssgen.setSignerUserID(false, it.next());
+            sgen.setHashedSubpackets(ssgen.generate());
+        }
+        return sgen;
+    }
+
+    private static PGPSecretKey readSecretKey(InputStream input) throws IOException, PGPException {
         PGPSecretKeyRingCollection pgpSec = new PGPSecretKeyRingCollection(
             PGPUtil.getDecoderStream(input), new JcaKeyFingerprintCalculator()
         );
@@ -148,6 +220,22 @@ final class GpgClearsign {
             sign.update(line, 0, length);
         }
         out.write(line, 0, line.length);
+    }
+
+    /**
+     * Process line.
+     * @param sign Signature generator
+     * @param line Line to process
+     * @throws IOException On error
+     */
+    private static void processLine(final PGPSignatureGenerator sign, final byte[] line)
+        throws IOException {
+        // note: trailing white space needs to be removed from the end of
+        // each line for signature calculation RFC 4880 Section 7.1
+        int length = getLengthWithoutWhiteSpace(line);
+        if (length > 0) {
+            sign.update(line, 0, length);
+        }
     }
 
     private static int getLengthWithoutWhiteSpace(final byte[] line) {
