@@ -24,8 +24,10 @@
 package com.artipie.debian.misc;
 
 import com.artipie.asto.test.TestResource;
+import org.cactoos.list.ListOf;
+import org.hamcrest.Matcher;
 import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
+import org.hamcrest.core.AllOf;
 import org.hamcrest.core.StringContains;
 import org.junit.jupiter.api.Test;
 
@@ -44,14 +46,15 @@ class GpgClearsignTest {
             .signedContent(new TestResource("secret-keys.gpg").asBytes(), "1q2w3e4r5t6y7u")
         );
         MatcherAssert.assertThat(
-            "Contains original file and signature",
             res,
-            Matchers.allOf(
-                new StringContains(new String(release)),
-                new StringContains("-----BEGIN PGP SIGNED MESSAGE-----"),
-                new StringContains("Hash: SHA256"),
-                new StringContains("-----BEGIN PGP SIGNATURE-----"),
-                new StringContains("-----END PGP SIGNATURE-----")
+            new AllOf<>(
+                new ListOf<Matcher<? super String>>(
+                    new StringContains(new String(release)),
+                    new StringContains("-----BEGIN PGP SIGNED MESSAGE-----"),
+                    new StringContains("Hash: SHA256"),
+                    new StringContains("-----BEGIN PGP SIGNATURE-----"),
+                    new StringContains("-----END PGP SIGNATURE-----")
+                )
             )
         );
     }
@@ -63,11 +66,12 @@ class GpgClearsignTest {
             .signature(new TestResource("secret-keys.gpg").asBytes(), "1q2w3e4r5t6y7u")
         );
         MatcherAssert.assertThat(
-            "Contains signature",
             res,
-            Matchers.allOf(
-                new StringContains("-----BEGIN PGP SIGNATURE-----"),
-                new StringContains("-----END PGP SIGNATURE-----")
+            new AllOf<>(
+                new ListOf<Matcher<? super String>>(
+                    new StringContains("-----BEGIN PGP SIGNATURE-----"),
+                    new StringContains("-----END PGP SIGNATURE-----")
+                )
             )
         );
     }
