@@ -73,7 +73,7 @@ final class GpgClearsign {
     }
 
     /**
-     * Signs content with GPG crearsign signature and returns it along with the signature.
+     * Signs content with GPG clearsign signature and returns it along with the signature.
      * @param key Private key bytes
      * @param pass Password
      * @return File, signed with gpg
@@ -117,7 +117,7 @@ final class GpgClearsign {
     }
 
     /**
-     * Signs content with GPG crearsign signature and returns the signature.
+     * Signs content with GPG clearsign signature and returns the signature.
      * @param key Private key bytes
      * @param pass Password
      * @return File, signed with gpg
