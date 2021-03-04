@@ -28,6 +28,7 @@ import org.cactoos.list.ListOf;
 import org.hamcrest.Matcher;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.AllOf;
+import org.hamcrest.core.IsNot;
 import org.hamcrest.core.StringContains;
 import org.junit.jupiter.api.Test;
 
@@ -70,7 +71,8 @@ class GpgClearsignTest {
             new AllOf<>(
                 new ListOf<Matcher<? super String>>(
                     new StringContains("-----BEGIN PGP SIGNATURE-----"),
-                    new StringContains("-----END PGP SIGNATURE-----")
+                    new StringContains("-----END PGP SIGNATURE-----"),
+                    new IsNot<>(new StringContains("Version"))
                 )
             )
         );

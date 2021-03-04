@@ -122,26 +122,20 @@ public final class GpgClearsign {
      * @param pass Password
      * @return File, signed with gpg
      */
-    byte[] signature(final byte[] key, final String pass) {
+    public byte[] signature(final byte[] key, final String pass) {
         try {
             final ByteArrayOutputStream out = new ByteArrayOutputStream();
             final ArmoredOutputStream armored = new ArmoredOutputStream(out);
             try (
                 final InputStream input = new BufferedInputStream(
                     new ByteArrayInputStream(this.content)
-                );
-                final ByteArrayOutputStream line = new ByteArrayOutputStream()) {
+                )
+            ) {
+                armored.setHeader(ArmoredOutputStream.VERSION_HDR, null);
                 final PGPSignatureGenerator sgen = prepareGenerator(key, pass);
-                int ahead = readInputLine(line, input);
-                processLine(sgen, line.toByteArray());
-                if (ahead != -1) {
-                    do {
-                        ahead = readInputLine(line, ahead, input);
-                        sgen.update((byte) '\r');
-                        sgen.update((byte) '\n');
-                        processLine(sgen, line.toByteArray());
-                    }
-                    while (ahead != -1);
+                int sym;
+                while ((sym = input.read()) >= 0) {
+                    sgen.update((byte) sym);
                 }
                 final BCPGOutputStream res = new BCPGOutputStream(armored);
                 sgen.generate().encode(res);
@@ -220,22 +214,6 @@ public final class GpgClearsign {
             sign.update(line, 0, length);
         }
         out.write(line, 0, line.length);
-    }
-
-    /**
-     * Process line.
-     * @param sign Signature generator
-     * @param line Line to process
-     * @throws IOException On error
-     */
-    private static void processLine(final PGPSignatureGenerator sign, final byte[] line)
-        throws IOException {
-        // note: trailing white space needs to be removed from the end of
-        // each line for signature calculation RFC 4880 Section 7.1
-        int length = getLengthWithoutWhiteSpace(line);
-        if (length > 0) {
-            sign.update(line, 0, length);
-        }
     }
 
     private static int getLengthWithoutWhiteSpace(final byte[] line) {

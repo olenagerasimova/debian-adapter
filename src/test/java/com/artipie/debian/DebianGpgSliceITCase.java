@@ -134,6 +134,14 @@ public final class DebianGpgSliceITCase {
     @Test
     void installWithInReleaseFileWorks() throws Exception {
         this.copyPackage("aglfn_1.7-3_amd64.deb");
+        this.storage.save(
+            new Key.From("dists/artipie/InRelease"),
+            new Content.From(
+                new GpgClearsign(new TestResource("Release").asBytes()).signedContent(
+                    new TestResource("secret-keys.gpg").asBytes(), "1q2w3e4r5t6y7u"
+                )
+            )
+        ).join();
         MatcherAssert.assertThat(
             "InRelease file is used on update the world",
             this.exec("apt-get", "update"),
@@ -143,6 +151,45 @@ public final class DebianGpgSliceITCase {
                     new MatchesPattern(Pattern.compile("[\\S\\s]*Get:1 http://host.testcontainers.internal:\\d+ artipie InRelease[\\S\\s]*")),
                     new MatchesPattern(Pattern.compile("[\\S\\s]*Get:2 http://host.testcontainers.internal:\\d+ artipie/main amd64 Packages \\[1351 B][\\S\\s]*")),
                     new IsNot<>(new StringContains("Get:3"))
+                )
+            )
+        );
+        MatcherAssert.assertThat(
+            "Package was downloaded and unpacked",
+            this.exec("apt-get", "install", "-y", "aglfn"),
+            new AllOf<>(
+                new ListOf<Matcher<? super String>>(
+                    // @checkstyle LineLengthCheck (1 line)
+                    new MatchesPattern(Pattern.compile("[\\S\\s]*Get:1 http://host.testcontainers.internal:\\d+ artipie/main amd64 aglfn amd64 1.7-3 \\[29.9 kB][\\S\\s]*")),
+                    new IsNot<>(new StringContains("Get:2")),
+                    new StringContainsInOrder(new ListOf<>("Unpacking aglfn", "Setting up aglfn"))
+                )
+            )
+        );
+    }
+
+    @Test
+    void installWithReleaseFileWorks() throws Exception {
+        this.copyPackage("aglfn_1.7-3_amd64.deb");
+        new TestResource("Release").saveTo(this.storage, new Key.From("dists/artipie/Release"));
+        this.storage.save(
+            new Key.From("dists/artipie/Release.gpg"),
+            new Content.From(
+                new GpgClearsign(new TestResource("Release").asBytes()).signature(
+                    new TestResource("secret-keys.gpg").asBytes(), "1q2w3e4r5t6y7u"
+                )
+            )
+        ).join();
+        MatcherAssert.assertThat(
+            "InRelease file is used on update the world",
+            this.exec("apt-get", "update"),
+            new AllOf<>(
+                new ListOf<Matcher<? super String>>(
+                    // @checkstyle LineLengthCheck (3 lines)
+                    new MatchesPattern(Pattern.compile("[\\S\\s]*Get:2 http://host.testcontainers.internal:\\d+ artipie Release[\\S\\s]*")),
+                    new MatchesPattern(Pattern.compile("[\\S\\s]*Get:3 http://host.testcontainers.internal:\\d+ artipie Release.gpg[\\S\\s]*")),
+                    new MatchesPattern(Pattern.compile("[\\S\\s]*Get:4 http://host.testcontainers.internal:\\d+ artipie/main amd64 Packages \\[1351 B][\\S\\s]*")),
+                    new IsNot<>(new StringContains("Get:5"))
                 )
             )
         );
@@ -170,14 +217,6 @@ public final class DebianGpgSliceITCase {
         new TestResource(pkg).saveTo(this.storage, new Key.From("main", pkg));
         new TestResource("Packages.gz")
             .saveTo(this.storage, new Key.From("dists/artipie/main/binary-amd64/Packages.gz"));
-        this.storage.save(
-            new Key.From("dists/artipie/InRelease"),
-            new Content.From(
-                new GpgClearsign(new TestResource("Release").asBytes()).signedContent(
-                    new TestResource("secret-keys.gpg").asBytes(), "1q2w3e4r5t6y7u"
-                )
-            )
-        ).join();
     }
 
     private String exec(final String... command) throws Exception {
