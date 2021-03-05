@@ -32,14 +32,10 @@ import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
-import org.apache.commons.lang3.NotImplementedException;
 import org.cactoos.list.ListOf;
 import org.hamcrest.MatcherAssert;
-import org.hamcrest.core.IsEqual;
+import org.hamcrest.core.StringContains;
 import org.hamcrest.text.StringContainsInOrder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,11 +65,10 @@ class PackageAstoTest {
     }
 
     @Test
-    void addsPackagesItem() throws IOException {
+    void addsOnePackagesItem() throws IOException {
         new TestResource(PackageAstoTest.KEY).saveTo(this.asto);
-        final Fake release = new Fake();
-        new Package.Asto(this.asto, release)
-            .add(this.packageInfo(), new Key.From(PackageAstoTest.KEY))
+        new Package.Asto(this.asto)
+            .add(new ListOf<>(this.firstPackageInfo()), new Key.From(PackageAstoTest.KEY))
             .toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Packages index has info about 3 packages",
@@ -82,40 +77,69 @@ class PackageAstoTest {
                 new ListOf<String>(
                     "Package: aglfn",
                     "Package: pspp",
-                    "Package: abc"
+                    "\n\n",
+                    this.firstPackageInfo()
                 )
             )
-        );
-        MatcherAssert.assertThat(
-            "Release index file was update",
-            release.count.get(),
-            new IsEqual<>(1)
         );
     }
 
     @Test
-    void addsPackagesItemWhenIndexIsNew() throws IOException {
-        final Fake release = new Fake();
-        new Package.Asto(this.asto, release)
-            .add(this.packageInfo(), new Key.From(PackageAstoTest.KEY))
+    void addsSeveralPackagesItems() throws IOException {
+        new TestResource(PackageAstoTest.KEY).saveTo(this.asto);
+        new Package.Asto(this.asto).add(
+            new ListOf<>(this.firstPackageInfo(), this.secondPackageInfo()),
+            new Key.From(PackageAstoTest.KEY)
+        ).toCompletableFuture().join();
+        MatcherAssert.assertThat(
+            "Packages index has info about 4 packages",
+            this.archiveAsString(),
+            new StringContainsInOrder(
+                new ListOf<String>(
+                    "Package: aglfn",
+                    "Package: pspp",
+                    "\n\n",
+                    this.firstPackageInfo(),
+                    "\n\n",
+                    this.secondPackageInfo()
+                )
+            )
+        );
+    }
+
+    @Test
+    void addsOnePackagesItemWhenIndexIsNew() throws IOException {
+        new Package.Asto(this.asto)
+            .add(new ListOf<>(this.firstPackageInfo()), new Key.From(PackageAstoTest.KEY))
             .toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Packages index was created with added package",
             this.archiveAsString(),
-            new StringContainsInOrder(
-                new ListOf<String>(
-                    "Package: abc"
-                )
-            )
-        );
-        MatcherAssert.assertThat(
-            "Release index file was update",
-            release.count.get(),
-            new IsEqual<>(1)
+            new StringContains(this.firstPackageInfo())
         );
     }
 
-    private String packageInfo() {
+    @Test
+    void addsSeveralPackagesItemsWhenIndexIsNew() throws IOException {
+        new Package.Asto(this.asto)
+            .add(
+                new ListOf<>(this.firstPackageInfo(), this.secondPackageInfo()),
+                new Key.From(PackageAstoTest.KEY)
+            ).toCompletableFuture().join();
+        MatcherAssert.assertThat(
+            "Packages index was created with added packages",
+            this.archiveAsString(),
+            new StringContainsInOrder(
+                new ListOf<String>(
+                    this.firstPackageInfo(),
+                    "\n\n",
+                    this.secondPackageInfo()
+                )
+            )
+        );
+    }
+
+    private String firstPackageInfo() {
         return String.join(
             "\n",
             "Package: abc",
@@ -127,6 +151,21 @@ class PackageAstoTest {
             "Filename: some/debian/package.deb",
             "Size: 23",
             "MD5sum: e99a18c428cb38d5f260853678922e03"
+        );
+    }
+
+    private String secondPackageInfo() {
+        return String.join(
+            "\n",
+            "Package: some package",
+            "Version: 0.3",
+            "Architecture: all",
+            "Maintainer: Unknown",
+            "Installed-Size: 45",
+            "Section: The Unknown",
+            "Filename: some/debian/unknown.deb",
+            "Size: 23",
+            "MD5sum: e99a18c428cb78d5f2608536128922e03"
         );
     }
 
@@ -147,34 +186,6 @@ class PackageAstoTest {
                 out.write(buf, 0, cnt);
             }
             return out.toString();
-        }
-    }
-
-    /**
-     * Fake {@link Release} implementation for the test.
-     * @since 0.2
-     */
-    private final class Fake implements Release {
-
-        /**
-         * Method calls count.
-         */
-        private final AtomicInteger count = new AtomicInteger(0);
-
-        @Override
-        public CompletionStage<Void> create() {
-            throw new NotImplementedException("Not implemented");
-        }
-
-        @Override
-        public CompletionStage<Void> update(final Key pckg) {
-            this.count.incrementAndGet();
-            return CompletableFuture.allOf();
-        }
-
-        @Override
-        public Key key() {
-            throw new NotImplementedException("Not implemented");
         }
     }
 
