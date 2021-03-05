@@ -48,6 +48,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.cactoos.list.ListOf;
 import org.reactivestreams.Publisher;
 
 /**
@@ -106,8 +107,11 @@ public final class UpdateSlice implements Slice {
                                         )
                                     ).map(
                                         index -> new Package.Asto(
-                                            this.asto, new Release.Asto(this.asto, this.config)
-                                        ).add(item, new Key.From(index))
+                                            this.asto
+                                        ).add(new ListOf<>(item), new Key.From(index)).thenCompose(
+                                            nothing -> new Release.Asto(this.asto, this.config)
+                                                .update(new Key.From(index))
+                                        )
                                     ).toArray(CompletableFuture[]::new)
                                 )
                             ).thenApply(nothing -> StandardRs.OK);
