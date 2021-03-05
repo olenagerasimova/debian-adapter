@@ -32,9 +32,13 @@ import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.cactoos.list.ListOf;
 import org.hamcrest.MatcherAssert;
+import org.hamcrest.core.IsEqual;
 import org.hamcrest.core.StringContains;
 import org.hamcrest.text.StringContainsInOrder;
 import org.junit.jupiter.api.BeforeEach;
@@ -82,6 +86,7 @@ class PackageAstoTest {
                 )
             )
         );
+        this.verifyThatTempDirIsCleanedUp();
     }
 
     @Test
@@ -105,6 +110,7 @@ class PackageAstoTest {
                 )
             )
         );
+        this.verifyThatTempDirIsCleanedUp();
     }
 
     @Test
@@ -187,6 +193,16 @@ class PackageAstoTest {
             }
             return out.toString();
         }
+    }
+
+    private void verifyThatTempDirIsCleanedUp() throws IOException {
+        final Path systemtemp = Paths.get(System.getProperty("java.io.tmpdir"));
+        MatcherAssert.assertThat(
+            "Temp dir for indexes removed",
+            Files.list(systemtemp)
+                .noneMatch(path -> path.getFileName().toString().startsWith("packages")),
+            new IsEqual<>(true)
+        );
     }
 
 }
