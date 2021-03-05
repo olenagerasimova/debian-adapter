@@ -51,12 +51,18 @@ import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
 /**
  * Gpg signature.
  * @since 0.4
+ * @checkstyle ExecutableStatementCountCheck (500 lines)
+ * @checkstyle ClassDataAbstractionCouplingCheck (500 lines)
+ * @checkstyle InnerAssignmentCheck (500 lines)
  * @todo #29:30min Main functionality of this class was copy-pasted from
  *  https://github.com/bcgit/bc-java/blob/master/pg/src/main/java/org/bouncycastle/openpgp/examples/ClearSignedFileProcessor.java
  *  Let's refactor this class, step by step, remove not necessary functionality, add javadocs, etc.
- *  The job can be performed in several steps, on the last iteration do not forget to remove this
- *  class from qulice exclusion.
+ *  The job can be performed in several steps, on the last iteration do not forget to remove all
+ *  suppressions.
  */
+@SuppressWarnings(
+    {"PMD.AvoidDuplicateLiterals", "PMD.AssignmentInOperand", "PMD.ArrayIsStoredDirectly"}
+)
 public final class GpgClearsign {
 
     /**
@@ -83,27 +89,27 @@ public final class GpgClearsign {
             final ByteArrayOutputStream out = new ByteArrayOutputStream();
             final ArmoredOutputStream armored = new ArmoredOutputStream(out);
             try (
-                final InputStream input = new BufferedInputStream(
-                    new ByteArrayInputStream(content)
+                InputStream input = new BufferedInputStream(
+                    new ByteArrayInputStream(this.content)
                 );
-                final ByteArrayOutputStream line = new ByteArrayOutputStream()
+                ByteArrayOutputStream line = new ByteArrayOutputStream()
             ) {
-                final PGPSignatureGenerator sgen = prepareGenerator(key, pass);
+                final PGPSignatureGenerator sgen = GpgClearsign.prepareGenerator(key, pass);
                 armored.beginClearText(PGPUtil.SHA256);
                 int ahead = readInputLine(line, input);
-                processLine(armored, sgen, line.toByteArray());
+                GpgClearsign.processLine(armored, sgen, line.toByteArray());
                 if (ahead != -1) {
                     do {
-                        ahead = readInputLine(line, ahead, input);
+                        ahead = GpgClearsign.readInputLine(line, ahead, input);
                         sgen.update((byte) '\r');
                         sgen.update((byte) '\n');
-                        processLine(armored, sgen, line.toByteArray());
+                        GpgClearsign.processLine(armored, sgen, line.toByteArray());
                     }
                     while (ahead != -1);
                 }
                 armored.endClearText();
-                BCPGOutputStream bOut = new BCPGOutputStream(armored);
-                sgen.generate().encode(bOut);
+                final BCPGOutputStream bout = new BCPGOutputStream(armored);
+                sgen.generate().encode(bout);
                 armored.close();
                 return out.toByteArray();
             }
@@ -127,7 +133,7 @@ public final class GpgClearsign {
             final ByteArrayOutputStream out = new ByteArrayOutputStream();
             final ArmoredOutputStream armored = new ArmoredOutputStream(out);
             try (
-                final InputStream input = new BufferedInputStream(
+                InputStream input = new BufferedInputStream(
                     new ByteArrayInputStream(this.content)
                 )
             ) {
@@ -172,24 +178,30 @@ public final class GpgClearsign {
         );
         final PGPSignatureSubpacketGenerator ssgen = new PGPSignatureSubpacketGenerator();
         sgen.init(PGPSignature.CANONICAL_TEXT_DOCUMENT, pkey);
-        final Iterator<String> it = skey.getPublicKey().getUserIDs();
-        if (it.hasNext()) {
-            ssgen.setSignerUserID(false, it.next());
+        final Iterator<String> ids = skey.getPublicKey().getUserIDs();
+        if (ids.hasNext()) {
+            ssgen.setSignerUserID(false, ids.next());
             sgen.setHashedSubpackets(ssgen.generate());
         }
         return sgen;
     }
 
-    private static PGPSecretKey readSecretKey(InputStream input) throws IOException, PGPException {
-        PGPSecretKeyRingCollection pgpSec = new PGPSecretKeyRingCollection(
+    /**
+     * Reads secret key from provided input stream.
+     * @param input Input stream to read stream from
+     * @return Instance of PGPSecretKey
+     * @throws IOException On IO errors
+     * @throws PGPException On Keys errors
+     */
+    private static PGPSecretKey readSecretKey(final InputStream input)
+        throws IOException, PGPException {
+        final Iterator<PGPSecretKeyRing> keys = new PGPSecretKeyRingCollection(
             PGPUtil.getDecoderStream(input), new JcaKeyFingerprintCalculator()
-        );
-        Iterator<PGPSecretKeyRing> keyRingIter = pgpSec.getKeyRings();
-        while (keyRingIter.hasNext()) {
-            PGPSecretKeyRing keyRing = keyRingIter.next();
-            Iterator<PGPSecretKey> keyIter = keyRing.getSecretKeys();
-            while (keyIter.hasNext()) {
-                PGPSecretKey key = keyIter.next();
+        ).getKeyRings();
+        while (keys.hasNext()) {
+            final Iterator<PGPSecretKey> skey = keys.next().getSecretKeys();
+            while (skey.hasNext()) {
+                final PGPSecretKey key = skey.next();
                 if (key.isSigningKey()) {
                     return key;
                 }
@@ -199,7 +211,8 @@ public final class GpgClearsign {
     }
 
     /**
-     * Process line.
+     * Process line, trailing white space needs to be removed from the end of each line for
+     * signature calculation according to RFC 4880 Section 7.1.
      * @param out Where to write
      * @param sign Signature generator
      * @param line Line to process
@@ -207,71 +220,108 @@ public final class GpgClearsign {
      */
     private static void processLine(final OutputStream out, final PGPSignatureGenerator sign,
         final byte[] line) throws IOException {
-        // note: trailing white space needs to be removed from the end of
-        // each line for signature calculation RFC 4880 Section 7.1
-        int length = getLengthWithoutWhiteSpace(line);
+        final int length = getLengthWithoutWhiteSpace(line);
         if (length > 0) {
             sign.update(line, 0, length);
         }
         out.write(line, 0, line.length);
     }
 
+    /**
+     * Line length without whitespace.
+     * @param line Line to measure
+     * @return Length
+     */
     private static int getLengthWithoutWhiteSpace(final byte[] line) {
         int end = line.length - 1;
-        while (end >= 0 && isWhiteSpace(line[end])) {
-            end--;
+        while (end >= 0 && GpgClearsign.isWhiteSpace(line[end])) {
+            end = end - 1;
         }
         return end + 1;
     }
 
-    private static boolean isWhiteSpace(byte b) {
-        return isLineEnding(b) || b == '\t' || b == ' ';
+    /**
+     * Is symbol a whitespace?
+     * @param sym Symbol
+     * @return True if it is a whitespace
+     */
+    private static boolean isWhiteSpace(final byte sym) {
+        return GpgClearsign.isLineEnding(sym) || sym == '\t' || sym == ' ';
     }
 
-    private static boolean isLineEnding(byte b) {
-        return b == '\r' || b == '\n';
+    /**
+     * Is symbol an end of the line?
+     * @param sym Symbol
+     * @return True if it is
+     */
+    private static boolean isLineEnding(final byte sym) {
+        return sym == '\r' || sym == '\n';
     }
 
-    private static int readInputLine(ByteArrayOutputStream bOut, InputStream fIn)
+    /**
+     * Reads input line.
+     * @param out Where to write
+     * @param input Where to read from
+     * @return Symbols ahead
+     * @throws IOException On IO error
+     */
+    private static int readInputLine(final ByteArrayOutputStream out, final InputStream input)
         throws IOException {
-        bOut.reset();
-        int lookAhead = -1;
-        int ch;
-        while ((ch = fIn.read()) >= 0) {
-            bOut.write(ch);
-            if (ch == '\r' || ch == '\n') {
-                lookAhead = readPassedEOL(bOut, ch, fIn);
+        out.reset();
+        int ahead = -1;
+        int sym;
+        while ((sym = input.read()) >= 0) {
+            out.write(sym);
+            if (GpgClearsign.isLineEnding((byte) sym)) {
+                ahead = GpgClearsign.readPassedEol(out, sym, input);
                 break;
             }
         }
-        return lookAhead;
+        return ahead;
     }
 
-    private static int readInputLine(ByteArrayOutputStream bOut, int lookAhead, InputStream fIn)
-        throws IOException {
-        bOut.reset();
-        int ch = lookAhead;
+    /**
+     * Reads input line.
+     * @param out Where to write
+     * @param ahead Already read
+     * @param input Where to read from
+     * @return Symbols ahead
+     * @throws IOException On IO error
+     */
+    private static int readInputLine(final ByteArrayOutputStream out, final int ahead,
+        final InputStream input) throws IOException {
+        out.reset();
+        int cnt = ahead;
+        int res = ahead;
         do {
-            bOut.write(ch);
-            if (ch == '\r' || ch == '\n') {
-                lookAhead = readPassedEOL(bOut, ch, fIn);
+            out.write(cnt);
+            if (cnt == '\r' || cnt == '\n') {
+                res = GpgClearsign.readPassedEol(out, cnt, input);
                 break;
             }
         }
-        while ((ch = fIn.read()) >= 0);
-        if (ch < 0) {
-            lookAhead = -1;
+        while ((cnt = input.read()) >= 0);
+        if (cnt < 0) {
+            res = -1;
         }
-        return lookAhead;
+        return res;
     }
 
-    private static int readPassedEOL(ByteArrayOutputStream bOut, int lastCh, InputStream fIn)
-        throws IOException {
-        int lookAhead = fIn.read();
-        if (lastCh == '\r' && lookAhead == '\n') {
-            bOut.write(lookAhead);
-            lookAhead = fIn.read();
+    /**
+     * Reads end of line.
+     * @param out Where to write
+     * @param last Symbol
+     * @param input Where to read from
+     * @return Symbols ahead
+     * @throws IOException On IO error
+     */
+    private static int readPassedEol(final ByteArrayOutputStream out, final int last,
+        final InputStream input) throws IOException {
+        int ahead = input.read();
+        if (last == '\r' && ahead == '\n') {
+            out.write(ahead);
+            ahead = input.read();
         }
-        return lookAhead;
+        return ahead;
     }
 }

@@ -269,8 +269,6 @@ SOFTWARE.
           <excludes combine.children="append">
             <exclude>checkstyle:.*/src/test/resources/.*</exclude>
             <exclude>pmd:.*/src/test/resources/.*</exclude>
-            <exclude>pmd:.*/src/main/java/com/artipie/debian/misc/GpgClearsign.java</exclude>
-            <exclude>checkstyle:.*/src/main/java/com/artipie/debian/misc/GpgClearsign.java</exclude>
           </excludes>
           <license>file:${basedir}/LICENSE.txt</license>
         </configuration>
