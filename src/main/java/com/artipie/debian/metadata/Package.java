@@ -34,7 +34,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
@@ -52,7 +51,7 @@ public interface Package {
      * @param index Package index key
      * @return Completion action
      */
-    CompletionStage<Void> add(List<String> items, Key index);
+    CompletionStage<Void> add(Iterable<String> items, Key index);
 
     /**
      * Simple {@link Package} implementation: it appends item to the index without any validation.
@@ -80,7 +79,7 @@ public interface Package {
         }
 
         @Override
-        public CompletionStage<Void> add(final List<String> items, final Key index) {
+        public CompletionStage<Void> add(final Iterable<String> items, final Key index) {
             final byte[] bytes = String.join(Asto.SEP, items).getBytes(StandardCharsets.UTF_8);
             return this.asto.exists(index).thenCompose(
                 exists -> {
