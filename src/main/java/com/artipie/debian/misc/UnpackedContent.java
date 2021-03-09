@@ -23,18 +23,24 @@
  */
 package com.artipie.debian.misc;
 
-import com.artipie.asto.Concatenation;
-import com.artipie.asto.Remaining;
-import hu.akarnokd.rxjava2.interop.SingleInterop;
+import com.artipie.asto.Content;
+import com.artipie.asto.FailedCompletionStage;
+import com.artipie.asto.Key;
+import com.artipie.asto.fs.FileStorage;
 import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.reactivestreams.Publisher;
@@ -42,6 +48,7 @@ import org.reactivestreams.Publisher;
 /**
  * Unpacked content.
  * @since 0.3
+ * @checkstyle ClassDataAbstractionCouplingCheck (500 lines)
  */
 public final class UnpackedContent {
 
@@ -61,24 +68,22 @@ public final class UnpackedContent {
     /**
      * Calculates size and digest of the gz packed content.
      * @return Size and digest
-     * @todo #41:30min Do not read full package into memory while unpacking and calculating digest
-     *  as Packages indexes can be large and this operation will be memory consuming. Some
-     *  reactive input stream will be introduced, use it to avoid memory consumption.
      */
     @SuppressWarnings("PMD.AssignmentInOperand")
     public CompletionStage<Pair<Long, String>> sizeAndDigest() {
-        return new Concatenation(this.content)
-            .single()
-            .map(buf -> new Remaining(buf, true))
-            .map(Remaining::bytes)
-            .<Pair<Long, String>>map(
-                bytes -> {
+        try {
+            final Path temp = Files.createTempDirectory("unpack-");
+            final Path file = Files.createTempFile(temp, "Packages-", ".gz");
+            final MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return new FileStorage(temp).save(
+                new Key.From(file.getFileName().toString()), new Content.From(this.content)
+            ).thenApply(
+                ignored -> {
                     try (
                         GzipCompressorInputStream gcis = new GzipCompressorInputStream(
-                            new BufferedInputStream(new ByteArrayInputStream(bytes))
+                            new BufferedInputStream(Files.newInputStream(file))
                         )
                     ) {
-                        final MessageDigest digest = MessageDigest.getInstance("SHA-256");
                         long size = 0;
                         // @checkstyle MagicNumberCheck (1 line)
                         final byte[] buf = new byte[1024];
@@ -92,6 +97,22 @@ public final class UnpackedContent {
                         throw new UncheckedIOException(err);
                     }
                 }
-            ).to(SingleInterop.get());
+            ).handle(
+                (pair, throwable) -> {
+                    final CompletionStage<Pair<Long, String>> res;
+                    FileUtils.deleteQuietly(temp.toFile());
+                    if (throwable == null) {
+                        res = CompletableFuture.completedFuture(pair);
+                    } else {
+                        res = new FailedCompletionStage<>(throwable);
+                    }
+                    return res;
+                }
+            ).thenCompose(Function.identity());
+        } catch (final IOException err) {
+            throw new UncheckedIOException(err);
+        } catch (final NoSuchAlgorithmException err) {
+            throw new IllegalStateException(err);
+        }
     }
 }
