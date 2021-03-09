@@ -24,6 +24,7 @@
 package com.artipie.debian;
 
 import com.amihaiemil.eoyaml.YamlMapping;
+import com.artipie.asto.Storage;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Optional;
@@ -53,6 +54,12 @@ public interface Config {
     Collection<String> archs();
 
     /**
+     * Optional gpg-configuration.
+     * @return Gpg configuration if configured
+     */
+    Optional<GpgConfig> gpg();
+
+    /**
      * Implementation of {@link Config} that reads settings from yaml.
      * @since 0.2
      */
@@ -69,18 +76,26 @@ public interface Config {
         private final YamlMapping yaml;
 
         /**
+         * Artipie configuration storage.
+         */
+        private final Storage storage;
+
+        /**
          * Ctor.
          * @param name Repository name
          * @param yaml Setting in yaml format
+         * @param storage Artipie configuration storage
          */
-        public FromYaml(final String name, final Optional<YamlMapping> yaml) {
+        public FromYaml(final String name, final Optional<YamlMapping> yaml,
+            final Storage storage) {
             this(
                 name,
                 yaml.orElseThrow(
                     () -> new IllegalArgumentException(
                         "Illegal config: `setting` section is required for debian repos"
                     )
-                )
+                ),
+                storage
             );
         }
 
@@ -88,10 +103,12 @@ public interface Config {
          * Ctor.
          * @param name Repository name
          * @param yaml Setting in yaml format
+         * @param storage Artipie configuration storage
          */
-        public FromYaml(final String name, final YamlMapping yaml) {
+        public FromYaml(final String name, final YamlMapping yaml, final Storage storage) {
             this.name = name;
             this.yaml = yaml;
+            this.storage = storage;
         }
 
         @Override
@@ -115,6 +132,18 @@ public interface Config {
                     "Illegal config: `Architectures` is required for debian repos"
                 )
             );
+        }
+
+        @Override
+        public Optional<GpgConfig> gpg() {
+            final Optional<GpgConfig> res;
+            if (this.yaml.string(GpgConfig.FromYaml.GPG_PASSWORD) == null
+                || this.yaml.string(GpgConfig.FromYaml.GPG_SECRET_KEY) == null) {
+                res = Optional.empty();
+            } else {
+                res = Optional.of(new GpgConfig.FromYaml(this.yaml, this.storage));
+            }
+            return res;
         }
 
         /**

@@ -198,7 +198,8 @@ public final class DebianAuthSliceITCase {
                         Yaml.createYamlMappingBuilder()
                             .add("Components", "main")
                             .add("Architectures", "amd64")
-                            .build()
+                            .build(),
+                        storage
                     )
                 )
             )

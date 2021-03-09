@@ -80,7 +80,8 @@ class ReleaseAstoTest {
                         .add("Components", "main")
                         .add("Architectures", "amd intel")
                         .build()
-                )
+                ),
+                new InMemoryStorage()
             )
         ).create().toCompletableFuture().join();
         MatcherAssert.assertThat(
@@ -116,7 +117,8 @@ class ReleaseAstoTest {
                         .add("Components", "main")
                         .add("Architectures", "arm")
                         .build()
-                )
+                ),
+                new InMemoryStorage()
             )
         ).create().toCompletableFuture().join();
         MatcherAssert.assertThat(
@@ -157,7 +159,8 @@ class ReleaseAstoTest {
             this.asto,
             new Config.FromYaml(
                 "my-deb",
-                Optional.of(Yaml.createYamlMappingBuilder().build())
+                Optional.of(Yaml.createYamlMappingBuilder().build()),
+                new InMemoryStorage()
             )
         ).update(key).toCompletableFuture().join();
         MatcherAssert.assertThat(
@@ -196,7 +199,8 @@ class ReleaseAstoTest {
             this.asto,
             new Config.FromYaml(
                 "my-repo",
-                Optional.of(Yaml.createYamlMappingBuilder().build())
+                Optional.of(Yaml.createYamlMappingBuilder().build()),
+                new InMemoryStorage()
             )
         ).update(key).toCompletableFuture().join();
         // @checkstyle LineLengthCheck (3 lines)
@@ -234,7 +238,8 @@ class ReleaseAstoTest {
             this.asto,
             new Config.FromYaml(
                 "deb-test",
-                Optional.of(Yaml.createYamlMappingBuilder().build())
+                Optional.of(Yaml.createYamlMappingBuilder().build()),
+                new InMemoryStorage()
             )
         ).update(key).toCompletableFuture().join();
         // @checkstyle LineLengthCheck (3 lines)
@@ -255,7 +260,8 @@ class ReleaseAstoTest {
                 this.asto,
                 new Config.FromYaml(
                     "deb-repo",
-                    Optional.of(Yaml.createYamlMappingBuilder().build())
+                    Optional.of(Yaml.createYamlMappingBuilder().build()),
+                    new InMemoryStorage()
                 )
             ).key(),
             new IsEqual<>(new Key.From("dists/deb-repo/Release"))

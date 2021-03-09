@@ -107,7 +107,8 @@ public final class DebianGpgSliceITCase {
                         Yaml.createYamlMappingBuilder()
                             .add("Components", "main")
                             .add("Architectures", "amd64")
-                            .build()
+                            .build(),
+                        new InMemoryStorage()
                     )
                 )
             )
