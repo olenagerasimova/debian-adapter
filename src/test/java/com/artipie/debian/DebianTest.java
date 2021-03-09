@@ -41,8 +41,10 @@ import java.util.stream.Collectors;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.cactoos.list.ListOf;
+import org.hamcrest.Matcher;
 import org.hamcrest.MatcherAssert;
-import org.hamcrest.core.IsEqual;
+import org.hamcrest.core.AllOf;
+import org.hamcrest.core.StringContains;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -104,7 +106,13 @@ class DebianTest {
         ).toCompletableFuture().join();
         MatcherAssert.assertThat(
             this.archiveAsString(),
-            new IsEqual<>(String.join("\n", this.libobusOcaml(), "", this.aglfn()))
+            new AllOf<>(
+                new ListOf<Matcher<? super String>>(
+                    new StringContains("\n\n"),
+                    new StringContains(this.libobusOcaml()),
+                    new StringContains(this.aglfn())
+                )
+            )
         );
     }
 
@@ -121,7 +129,13 @@ class DebianTest {
             .toCompletableFuture().join();
         MatcherAssert.assertThat(
             this.archiveAsString(),
-            new IsEqual<>(String.join("\n", this.aglfn(), "", this.pspp()))
+            new AllOf<>(
+                new ListOf<Matcher<? super String>>(
+                    new StringContains("\n\n"),
+                    new StringContains(this.pspp()),
+                    new StringContains(this.aglfn())
+                )
+            )
         );
     }
 
