@@ -24,6 +24,9 @@
 package com.artipie.debian;
 
 import com.amihaiemil.eoyaml.Yaml;
+import com.artipie.asto.Content;
+import com.artipie.asto.memory.InMemoryStorage;
+import com.artipie.http.slice.KeyFromPath;
 import java.util.Optional;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
@@ -41,8 +44,9 @@ class ConfigFromYamlTest {
     void returnsCodename() {
         final String name = "my-deb";
         MatcherAssert.assertThat(
-            new Config.FromYaml(name, Optional.of(Yaml.createYamlMappingBuilder().build()))
-                .codename(),
+            new Config.FromYaml(
+                name, Optional.of(Yaml.createYamlMappingBuilder().build()), new InMemoryStorage()
+            ).codename(),
             new IsEqual<>(name)
         );
     }
@@ -53,7 +57,8 @@ class ConfigFromYamlTest {
         MatcherAssert.assertThat(
             new Config.FromYaml(
                 "any",
-                Optional.of(Yaml.createYamlMappingBuilder().add("Components", comps).build())
+                Optional.of(Yaml.createYamlMappingBuilder().add("Components", comps).build()),
+                new InMemoryStorage()
             ).components(),
             Matchers.contains(comps.split(" "))
         );
@@ -65,9 +70,42 @@ class ConfigFromYamlTest {
         MatcherAssert.assertThat(
             new Config.FromYaml(
                 "some",
-                Optional.of(Yaml.createYamlMappingBuilder().add("Architectures", archs).build())
+                Optional.of(Yaml.createYamlMappingBuilder().add("Architectures", archs).build()),
+                new InMemoryStorage()
             ).archs(),
             Matchers.contains(archs.split(" "))
+        );
+    }
+
+    @Test
+    void returnsGpgConfig() {
+        final String path = "/some/secret_key";
+        final InMemoryStorage storage = new InMemoryStorage();
+        storage.save(new KeyFromPath(path), Content.EMPTY).join();
+        MatcherAssert.assertThat(
+            new Config.FromYaml(
+                "my",
+                Optional.of(
+                    Yaml.createYamlMappingBuilder()
+                        .add("gpg_password", "098")
+                        .add("gpg_secret_key", path)
+                        .build()
+                ),
+                storage
+            ).gpg().isPresent(),
+            new IsEqual<>(true)
+        );
+    }
+
+    @Test
+    void returnsEmptyGpgIfSettingsAreNotPresent() {
+        MatcherAssert.assertThat(
+            new Config.FromYaml(
+                "my_deb",
+                Optional.of(Yaml.createYamlMappingBuilder().build()),
+                new InMemoryStorage()
+            ).gpg().isPresent(),
+            new IsEqual<>(false)
         );
     }
 
@@ -76,7 +114,7 @@ class ConfigFromYamlTest {
         MatcherAssert.assertThat(
             Assertions.assertThrows(
                 IllegalArgumentException.class,
-                () -> new Config.FromYaml("abc", Optional.empty())
+                () -> new Config.FromYaml("abc", Optional.empty(), new InMemoryStorage())
             ).getMessage(),
             new IsEqual<>("Illegal config: `setting` section is required for debian repos")
         );
@@ -88,7 +126,8 @@ class ConfigFromYamlTest {
             Assertions.assertThrows(
                 IllegalArgumentException.class,
                 () -> new Config.FromYaml(
-                    "123", Optional.of(Yaml.createYamlMappingBuilder().build())
+                    "123", Optional.of(Yaml.createYamlMappingBuilder().build()),
+                    new InMemoryStorage()
                 ).components()
             ).getMessage(),
             new IsEqual<>("Illegal config: `Components` is required for debian repos")
@@ -101,7 +140,8 @@ class ConfigFromYamlTest {
             Assertions.assertThrows(
                 IllegalArgumentException.class,
                 () -> new Config.FromYaml(
-                    "deb", Optional.of(Yaml.createYamlMappingBuilder().build())
+                    "deb", Optional.of(Yaml.createYamlMappingBuilder().build()),
+                    new InMemoryStorage()
                 ).archs()
             ).getMessage(),
             new IsEqual<>("Illegal config: `Architectures` is required for debian repos")

@@ -85,7 +85,7 @@ class UpdateSliceTest {
             "Response is OK",
             new UpdateSlice(
                 this.asto,
-                new Config.FromYaml("my_repo", UpdateSliceTest.SETTINGS)
+                new Config.FromYaml("my_repo", UpdateSliceTest.SETTINGS, new InMemoryStorage())
             ),
             new SliceHasResponse(
                 new RsHasStatus(RsStatus.OK),
@@ -124,7 +124,8 @@ class UpdateSliceTest {
                 this.asto,
                 new Config.FromYaml(
                     "deb_repo",
-                    UpdateSliceTest.SETTINGS
+                    UpdateSliceTest.SETTINGS,
+                    new InMemoryStorage()
                 )
             ),
             new SliceHasResponse(
@@ -164,7 +165,8 @@ class UpdateSliceTest {
                 this.asto,
                 new Config.FromYaml(
                     "my_repo",
-                    UpdateSliceTest.SETTINGS
+                    UpdateSliceTest.SETTINGS,
+                    new InMemoryStorage()
                 )
             ),
             new SliceHasResponse(
@@ -189,7 +191,8 @@ class UpdateSliceTest {
                 this.asto,
                 new Config.FromYaml(
                     "my_repo",
-                    UpdateSliceTest.SETTINGS
+                    UpdateSliceTest.SETTINGS,
+                    new InMemoryStorage()
                 )
             ),
             new SliceHasResponse(
