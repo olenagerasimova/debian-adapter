@@ -31,12 +31,15 @@ import com.artipie.asto.ext.Digests;
 import com.artipie.asto.ext.PublisherAs;
 import com.artipie.asto.rx.RxStorageWrapper;
 import com.artipie.debian.Config;
+import com.artipie.debian.GpgConfig;
+import com.artipie.debian.misc.GpgClearsign;
 import com.artipie.debian.misc.UnpackedContent;
 import hu.akarnokd.rxjava2.interop.SingleInterop;
 import io.reactivex.Observable;
 import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.regex.Pattern;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -68,6 +71,12 @@ public interface Release {
      * @return Item key
      */
     Key key();
+
+    /**
+     * Release index file gpg signature storage key.
+     * @return Item key
+     */
+    Key gpgKey();
 
     /**
      * Implementation of {@link Release} from abstract storage.
@@ -112,11 +121,10 @@ public interface Release {
                         "SHA256:",
                         checksums
                     )
-                ).thenCompose(
-                    file -> this.asto.save(
-                        this.key(),
-                        new Content.From(file.getBytes(StandardCharsets.UTF_8))
-                    )
+                ).thenApply(str -> str.getBytes(StandardCharsets.UTF_8))
+                .thenCompose(
+                    bytes -> this.asto.save(this.key(), new Content.From(bytes))
+                        .thenCompose(nothing -> this.createGpgSignature(bytes))
                 );
         }
 
@@ -131,17 +139,51 @@ public interface Release {
                         str -> Asto.addReplace(str, key.replace(".gz", ""), pair.getRight())
                     )
                 )
-            ).thenCompose(
-                str -> this.asto.save(
-                    this.key(),
-                    new Content.From(str.getBytes(StandardCharsets.UTF_8))
-                )
+            ).thenApply(str -> str.getBytes(StandardCharsets.UTF_8))
+                .thenCompose(
+                    bytes -> this.asto.save(this.key(), new Content.From(bytes))
+                        .thenCompose(nothing -> this.createGpgSignature(bytes))
             );
         }
 
         @Override
         public Key key() {
             return new Key.From(String.format("dists/%s/Release", this.config.codename()));
+        }
+
+        @Override
+        public Key gpgKey() {
+            return new Key.From(String.format("dists/%s/Release.gpg", this.config.codename()));
+        }
+
+        /**
+         * Creates gpg signature.
+         * @param release Release file bytes
+         * @return Completion action
+         */
+        private CompletionStage<Void> createGpgSignature(final byte[] release) {
+            final CompletionStage<Void> res;
+            if (this.config.gpg().isPresent()) {
+                final GpgConfig gpg = this.config.gpg().get();
+                res = gpg.key().thenApply(
+                    key -> new GpgClearsign(release).signature(key, gpg.password())
+                ).thenCompose(
+                    sign -> this.asto.save(this.gpgKey(), new Content.From(sign))
+                );
+            } else {
+                res = this.asto.exists(this.gpgKey()).thenCompose(
+                    exists -> {
+                        final CompletionStage<Void> del;
+                        if (exists) {
+                            del = this.asto.delete(this.gpgKey());
+                        } else {
+                            del = CompletableFuture.allOf();
+                        }
+                        return del;
+                    }
+                );
+            }
+            return res;
         }
 
         /**

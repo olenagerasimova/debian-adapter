@@ -147,6 +147,11 @@ class ReleaseSliceTest {
         public Key key() {
             return this.rfk;
         }
+
+        @Override
+        public Key gpgKey() {
+            throw new NotImplementedException("Not implemented yet");
+        }
     }
 
 }
