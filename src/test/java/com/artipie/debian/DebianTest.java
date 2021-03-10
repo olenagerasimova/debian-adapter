@@ -53,6 +53,10 @@ import org.junit.jupiter.api.Test;
  * @since 0.4
  * @checkstyle ClassDataAbstractionCouplingCheck (500 lines)
  * @checkstyle MagicNumberCheck (500 lines)
+ * @todo #51:30min Let's create a class in test scope to held/obtain information about test .deb
+ *  packages, the class should provide package name, bytes, be able to put the package into provided
+ *  storage and return meta info (like methods in this class do). We something similar in
+ *  rpm-adapter, check https://github.com/artipie/rpm-adapter/blob/master/src/test/java/com/artipie/rpm/TestRpm.java
  */
 @SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.AssignmentInOperand"})
 class DebianTest {
