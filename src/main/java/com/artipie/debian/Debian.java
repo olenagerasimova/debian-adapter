@@ -25,9 +25,20 @@ package com.artipie.debian;
 
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
+import com.artipie.asto.ext.ContentAs;
+import com.artipie.asto.rx.RxStorageWrapper;
+import com.artipie.debian.metadata.Control;
+import com.artipie.debian.metadata.Package;
+import com.artipie.debian.metadata.PackagesItem;
+import hu.akarnokd.rxjava2.interop.SingleInterop;
+import io.reactivex.Observable;
+import io.reactivex.Single;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionStage;
 import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 
 /**
  * Debian repository.
@@ -101,7 +112,24 @@ public interface Debian {
 
         @Override
         public CompletionStage<Void> updatePackages(final List<Key> debs, final Key packages) {
-            throw new NotImplementedException("Not yet implemented");
+            final RxStorageWrapper bsto = new RxStorageWrapper(this.asto);
+            return Observable.fromIterable(debs)
+                .flatMapSingle(
+                    key -> bsto.value(key).to(ContentAs.BYTES)
+                        .map(bytes -> new Control.FromBinary(bytes).asString())
+                        .map(string -> new ImmutablePair<>(key, string))
+                )
+                .flatMapSingle(
+                    pair -> Single.fromFuture(
+                        new PackagesItem.Asto(this.asto).format(pair.getValue(), pair.getKey())
+                            .toCompletableFuture()
+                    )
+                )
+                .collect((Callable<ArrayList<String>>) ArrayList::new, ArrayList::add)
+                .to(SingleInterop.get())
+                .thenCompose(
+                    list -> new Package.Asto(this.asto).add(list, packages)
+                );
         }
 
         @Override
