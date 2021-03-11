@@ -28,8 +28,10 @@ import com.artipie.asto.Storage;
 import com.artipie.asto.ext.ContentAs;
 import com.artipie.asto.rx.RxStorageWrapper;
 import com.artipie.debian.metadata.Control;
+import com.artipie.debian.metadata.InRelease;
 import com.artipie.debian.metadata.Package;
 import com.artipie.debian.metadata.PackagesItem;
+import com.artipie.debian.metadata.Release;
 import hu.akarnokd.rxjava2.interop.SingleInterop;
 import io.reactivex.Observable;
 import io.reactivex.Single;
@@ -37,7 +39,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionStage;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
 /**
@@ -134,17 +135,19 @@ public interface Debian {
 
         @Override
         public CompletionStage<Key> updateRelease(final Key packages) {
-            throw new NotImplementedException("Will be implemented letter");
+            final Release release = new Release.Asto(this.asto, this.config);
+            return release.update(packages).thenApply(nothing -> release.key());
         }
 
         @Override
         public CompletionStage<Key> generateRelease() {
-            throw new NotImplementedException("Not implemented yet");
+            final Release release = new Release.Asto(this.asto, this.config);
+            return release.create().thenApply(nothing -> release.key());
         }
 
         @Override
         public CompletionStage<Void> generateInRelease(final Key release) {
-            throw new NotImplementedException("To be implemented");
+            return new InRelease.Asto(this.asto, this.config).generate(release);
         }
     }
 }
