@@ -28,7 +28,9 @@ import com.artipie.asto.Content;
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
 import com.artipie.asto.blocking.BlockingStorage;
+import com.artipie.asto.ext.PublisherAs;
 import com.artipie.asto.memory.InMemoryStorage;
+import com.artipie.asto.test.ContentIs;
 import com.artipie.asto.test.TestResource;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
@@ -36,7 +38,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
@@ -44,7 +45,10 @@ import org.cactoos.list.ListOf;
 import org.hamcrest.Matcher;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.AllOf;
+import org.hamcrest.core.IsEqual;
+import org.hamcrest.core.IsNot;
 import org.hamcrest.core.StringContains;
+import org.hamcrest.text.StringContainsInOrder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -73,6 +77,19 @@ class DebianTest {
         new Key.From(DebianTest.NAME, "binary", "amd64", "Packages.gz");
 
     /**
+     * Release file lines.
+     */
+    private static final ListOf<String> RELEASE_LINES = new ListOf<>(
+        String.format("Codename: %s", DebianTest.NAME),
+        "Architectures: amd64",
+        "Components: main",
+        "Date:",
+        "SHA256:",
+        "my_deb_repo/binary/amd64/Packages.gz",
+        "my_deb_repo/binary/amd64/Packages"
+    );
+
+    /**
      * Test storage.
      */
     private Storage storage;
@@ -85,17 +102,25 @@ class DebianTest {
     @BeforeEach
     void init() {
         this.storage = new InMemoryStorage();
+        final String key = "secret-keys.gpg";
+        final Storage settings = new InMemoryStorage();
+        new TestResource(key).saveTo(settings);
         this.debian = new Debian.Asto(
             this.storage,
             new Config.FromYaml(
-                DebianTest.NAME, Optional.of(Yaml.createYamlMappingBuilder().build()),
-                new InMemoryStorage()
+                DebianTest.NAME,
+                Yaml.createYamlMappingBuilder()
+                    .add("Components", "main")
+                    .add("Architectures", "amd64")
+                    .add("gpg_password", "1q2w3e4r5t6y7u")
+                    .add("gpg_secret_key", key).build(),
+                settings
             )
         );
     }
 
     @Test
-    void addsPackagesIndex() throws IOException {
+    void addsPackagesAndReleaseIndexes() throws IOException {
         final List<String> debs = new ListOf<>(
             "libobus-ocaml_1.2.3-1+b3_amd64.deb",
             "aglfn_1.7-3_amd64.deb"
@@ -109,6 +134,7 @@ class DebianTest {
             DebianTest.PACKAGES
         ).toCompletableFuture().join();
         MatcherAssert.assertThat(
+            "Generates Packages index",
             this.archiveAsString(),
             new AllOf<>(
                 new ListOf<Matcher<? super String>>(
@@ -118,10 +144,38 @@ class DebianTest {
                 )
             )
         );
+        final Key release = this.debian.generateRelease().toCompletableFuture().join();
+        MatcherAssert.assertThat(
+            "Generates Release index",
+            new PublisherAs(this.storage.value(release).join()).asciiString()
+                .toCompletableFuture().join(),
+            new StringContainsInOrder(DebianTest.RELEASE_LINES)
+        );
+        MatcherAssert.assertThat(
+            "Generates Release.gpg file",
+            this.storage.exists(new Key.From(String.format("%s.gpg", release.string()))).join(),
+            new IsEqual<>(true)
+        );
+        this.debian.generateInRelease(release).toCompletableFuture().join();
+        MatcherAssert.assertThat(
+            "Generates InRelease index",
+            new PublisherAs(
+                this.storage.value(new Key.From("dists", DebianTest.NAME, "InRelease")).join()
+            ).asciiString().toCompletableFuture().join(),
+            new AllOf<>(
+                new ListOf<Matcher<? super String>>(
+                    new StringContainsInOrder(DebianTest.RELEASE_LINES),
+                    new StringContains("-----BEGIN PGP SIGNED MESSAGE-----"),
+                    new StringContains("Hash: SHA256"),
+                    new StringContains("-----BEGIN PGP SIGNATURE-----"),
+                    new StringContains("-----END PGP SIGNATURE-----")
+                )
+            )
+        );
     }
 
     @Test
-    void updatesPackagesIndex() throws IOException {
+    void updatesPackagesIndexAndReleaseFile() throws IOException {
         final String pckg = "pspp_1.2.0-3_amd64.deb";
         final Key.From key = new Key.From("some_repo", pckg);
         new TestResource(pckg).saveTo(this.storage, key);
@@ -132,6 +186,7 @@ class DebianTest {
         this.debian.updatePackages(new ListOf<>(key), DebianTest.PACKAGES)
             .toCompletableFuture().join();
         MatcherAssert.assertThat(
+            "Packages index was updated",
             this.archiveAsString(),
             new AllOf<>(
                 new ListOf<Matcher<? super String>>(
@@ -140,6 +195,38 @@ class DebianTest {
                     new StringContains(this.aglfn())
                 )
             )
+        );
+        this.storage.save(
+            new Key.From("dists", DebianTest.NAME, "Release"),
+            new Content.From(this.release().getBytes(StandardCharsets.UTF_8))
+        ).join();
+        final byte[] bytes = "any".getBytes();
+        this.storage.save(
+            new Key.From("dists", DebianTest.NAME, "Release.gpg"),
+            new Content.From(bytes)
+        ).join();
+        final Key release = this.debian.updateRelease(DebianTest.PACKAGES)
+            .toCompletableFuture().join();
+        MatcherAssert.assertThat(
+            "Updates Release index",
+            new PublisherAs(this.storage.value(release).join()).asciiString()
+                .toCompletableFuture().join(),
+            new AllOf<>(
+                new ListOf<Matcher<? super String>>(
+                    new StringContainsInOrder(DebianTest.RELEASE_LINES),
+                    new IsNot<>(
+                        new StringContains("abc123 123 my_deb_repo/binary/amd64/Packages.gz")
+                    ),
+                    new IsNot<>(
+                        new StringContains("098xyz 234 my_deb_repo/binary/amd64/Packages")
+                    )
+                )
+            )
+        );
+        MatcherAssert.assertThat(
+            "Generates new gpg signature",
+            this.storage.value(new Key.From(String.format("%s.gpg", release.string()))).join(),
+            new IsNot<>(new ContentIs(bytes))
         );
     }
 
@@ -169,6 +256,19 @@ class DebianTest {
             gcos.write(bytes);
         }
         return out.toByteArray();
+    }
+
+    private String release() {
+        return String.join(
+            "\n",
+            String.format("Codename: %s", DebianTest.NAME),
+            "Architectures: amd64",
+            "Components: main",
+            "Date:",
+            "SHA256:",
+            " abc123 123 my_deb_repo/binary/amd64/Packages.gz",
+            " 098xyz 234 my_deb_repo/binary/amd64/Packages"
+        );
     }
 
     private String pspp() {
