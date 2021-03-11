@@ -30,12 +30,12 @@ import com.artipie.asto.ext.PublisherAs;
 import com.artipie.debian.Config;
 import com.artipie.debian.GpgConfig;
 import com.artipie.debian.misc.GpgClearsign;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 /**
  * InRelease index file.
- * https://wiki.debian.org/DebianRepository/Format#A.22Release.22_files
+ * Check the <a href="https://wiki.debian.org/DebianRepository/Format#A.22Release.22_files">docs</a>
+ * for more information.
  * @since 0.4
  */
 public interface InRelease {
@@ -92,16 +92,8 @@ public interface InRelease {
                         )
                     ).thenCompose(bytes -> this.asto.save(this.key(), new Content.From(bytes)));
             } else {
-                res = this.asto.exists(this.key()).thenCompose(
-                    exists -> {
-                        final CompletionStage<Void> del;
-                        if (exists) {
-                            del = this.asto.delete(this.key());
-                        } else {
-                            del = CompletableFuture.allOf();
-                        }
-                        return del;
-                    }
+                res = this.asto.value(release).thenCompose(
+                    content -> this.asto.save(this.key(), content)
                 );
             }
             return res;

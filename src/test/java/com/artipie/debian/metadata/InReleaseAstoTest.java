@@ -90,9 +90,9 @@ class InReleaseAstoTest {
     }
 
     @Test
-    void removesIfGpgIsNotSet() {
+    void generatesIfGpgIsNotSet() {
         final String name = "my-repo";
-        final Key.From key = new Key.From("dists", name, "InRelease");
+        final Key.From key = new Key.From("dists", name, "Release");
         this.asto.save(key, Content.EMPTY).join();
         new InRelease.Asto(
             this.asto,
@@ -101,10 +101,10 @@ class InReleaseAstoTest {
                 Yaml.createYamlMappingBuilder().build(),
                 this.asto
             )
-        ).generate(new Key.From("any")).toCompletableFuture().join();
+        ).generate(key).toCompletableFuture().join();
         MatcherAssert.assertThat(
             this.asto.exists(key).join(),
-            new IsEqual<>(false)
+            new IsEqual<>(true)
         );
     }
 
