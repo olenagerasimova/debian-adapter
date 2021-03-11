@@ -138,8 +138,8 @@ class DebianTest {
             "Components: main",
             "Date:",
             "SHA256:",
-            "1136 my_deb_repo/binary/amd64/Packages.gz",
-            "2145 my_deb_repo/binary/amd64/Packages"
+            "my_deb_repo/binary/amd64/Packages.gz",
+            "my_deb_repo/binary/amd64/Packages"
         );
         MatcherAssert.assertThat(
             "Generates Release index",
@@ -216,8 +216,8 @@ class DebianTest {
                             "Components: main",
                             "Date:",
                             "SHA256:",
-                            "1350 my_deb_repo/binary/amd64/Packages.gz",
-                            "2571 my_deb_repo/binary/amd64/Packages"
+                            "my_deb_repo/binary/amd64/Packages.gz",
+                            "my_deb_repo/binary/amd64/Packages"
                         )
                     ),
                     new IsNot<>(
