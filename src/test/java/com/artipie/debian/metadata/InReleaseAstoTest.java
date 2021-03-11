@@ -29,13 +29,14 @@ import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
 import com.artipie.asto.ext.PublisherAs;
 import com.artipie.asto.memory.InMemoryStorage;
+import com.artipie.asto.test.ContentIs;
 import com.artipie.asto.test.TestResource;
 import com.artipie.debian.Config;
+import java.nio.charset.StandardCharsets;
 import org.cactoos.list.ListOf;
 import org.hamcrest.Matcher;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.AllOf;
-import org.hamcrest.core.IsEqual;
 import org.hamcrest.core.StringContains;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -93,18 +94,15 @@ class InReleaseAstoTest {
     void generatesIfGpgIsNotSet() {
         final String name = "my-repo";
         final Key.From key = new Key.From("dists", name, "Release");
-        this.asto.save(key, Content.EMPTY).join();
+        final byte[] bytes = "abc123".getBytes(StandardCharsets.UTF_8);
+        this.asto.save(key, new Content.From(bytes)).join();
         new InRelease.Asto(
             this.asto,
-            new Config.FromYaml(
-                name,
-                Yaml.createYamlMappingBuilder().build(),
-                this.asto
-            )
+            new Config.FromYaml(name, Yaml.createYamlMappingBuilder().build(), this.asto)
         ).generate(key).toCompletableFuture().join();
         MatcherAssert.assertThat(
-            this.asto.exists(key).join(),
-            new IsEqual<>(true)
+            this.asto.value(key).join(),
+            new ContentIs(bytes)
         );
     }
 
