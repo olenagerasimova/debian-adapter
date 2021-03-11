@@ -96,12 +96,13 @@ class InReleaseAstoTest {
         final Key.From key = new Key.From("dists", name, "Release");
         final byte[] bytes = "abc123".getBytes(StandardCharsets.UTF_8);
         this.asto.save(key, new Content.From(bytes)).join();
-        new InRelease.Asto(
+        final InRelease release = new InRelease.Asto(
             this.asto,
             new Config.FromYaml(name, Yaml.createYamlMappingBuilder().build(), this.asto)
-        ).generate(key).toCompletableFuture().join();
+        );
+        release.generate(key).toCompletableFuture().join();
         MatcherAssert.assertThat(
-            this.asto.value(key).join(),
+            this.asto.value(release.key()).join(),
             new ContentIs(bytes)
         );
     }
