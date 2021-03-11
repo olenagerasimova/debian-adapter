@@ -124,7 +124,7 @@ public interface Release {
                 ).thenApply(str -> str.getBytes(StandardCharsets.UTF_8))
                 .thenCompose(
                     bytes -> this.asto.save(this.key(), new Content.From(bytes))
-                        .thenCompose(nothing -> this.createGpgSignature(bytes))
+                        .thenCompose(nothing -> this.handleGpg(bytes))
                 );
         }
 
@@ -142,7 +142,7 @@ public interface Release {
             ).thenApply(str -> str.getBytes(StandardCharsets.UTF_8))
                 .thenCompose(
                     bytes -> this.asto.save(this.key(), new Content.From(bytes))
-                        .thenCompose(nothing -> this.createGpgSignature(bytes))
+                        .thenCompose(nothing -> this.handleGpg(bytes))
             );
         }
 
@@ -157,11 +157,12 @@ public interface Release {
         }
 
         /**
-         * Creates gpg signature.
+         * Handles gpg clearsign: generates the signature if corresponding settings are provided or
+         * removes the .gpg file if it is present and settings are not provided.
          * @param release Release file bytes
          * @return Completion action
          */
-        private CompletionStage<Void> createGpgSignature(final byte[] release) {
+        private CompletionStage<Void> handleGpg(final byte[] release) {
             final CompletionStage<Void> res;
             if (this.config.gpg().isPresent()) {
                 final GpgConfig gpg = this.config.gpg().get();
