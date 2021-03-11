@@ -149,7 +149,7 @@ class ReleaseSliceTest {
         }
 
         @Override
-        public Key gpgKey() {
+        public Key gpgSignatureKey() {
             throw new NotImplementedException("Not implemented yet");
         }
     }

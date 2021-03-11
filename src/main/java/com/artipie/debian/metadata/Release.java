@@ -73,10 +73,10 @@ public interface Release {
     Key key();
 
     /**
-     * Release index file gpg signature storage key.
+     * Key of the storage item with the detached GPG signature of the Release index.
      * @return Item key
      */
-    Key gpgKey();
+    Key gpgSignatureKey();
 
     /**
      * Implementation of {@link Release} from abstract storage.
@@ -152,7 +152,7 @@ public interface Release {
         }
 
         @Override
-        public Key gpgKey() {
+        public Key gpgSignatureKey() {
             return new Key.From(String.format("dists/%s/Release.gpg", this.config.codename()));
         }
 
@@ -169,14 +169,14 @@ public interface Release {
                 res = gpg.key().thenApply(
                     key -> new GpgClearsign(release).signature(key, gpg.password())
                 ).thenCompose(
-                    sign -> this.asto.save(this.gpgKey(), new Content.From(sign))
+                    sign -> this.asto.save(this.gpgSignatureKey(), new Content.From(sign))
                 );
             } else {
-                res = this.asto.exists(this.gpgKey()).thenCompose(
+                res = this.asto.exists(this.gpgSignatureKey()).thenCompose(
                     exists -> {
                         final CompletionStage<Void> del;
                         if (exists) {
-                            del = this.asto.delete(this.gpgKey());
+                            del = this.asto.delete(this.gpgSignatureKey());
                         } else {
                             del = CompletableFuture.allOf();
                         }

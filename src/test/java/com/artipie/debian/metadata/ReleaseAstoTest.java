@@ -84,7 +84,7 @@ class ReleaseAstoTest {
                     .add("Architectures", "amd intel")
             )
         );
-        this.asto.save(release.gpgKey(), Content.EMPTY).join();
+        this.asto.save(release.gpgSignatureKey(), Content.EMPTY).join();
         release.create().toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Correct release file was created",
@@ -171,7 +171,7 @@ class ReleaseAstoTest {
             this.asto,
             this.config(gpg, "my-deb", Yaml.createYamlMappingBuilder())
         );
-        this.asto.save(release.gpgKey(), Content.EMPTY).join();
+        this.asto.save(release.gpgSignatureKey(), Content.EMPTY).join();
         release.update(key).toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Release file was updated",
@@ -300,7 +300,7 @@ class ReleaseAstoTest {
                     Yaml.createYamlMappingBuilder().build(),
                     new InMemoryStorage()
                 )
-            ).gpgKey(),
+            ).gpgSignatureKey(),
             new IsEqual<>(new Key.From("dists/deb-repo/Release.gpg"))
         );
     }
