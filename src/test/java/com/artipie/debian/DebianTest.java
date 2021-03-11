@@ -77,6 +77,19 @@ class DebianTest {
         new Key.From(DebianTest.NAME, "binary", "amd64", "Packages.gz");
 
     /**
+     * Release file lines.
+     */
+    private static final ListOf<String> RELEASE_LINES = new ListOf<>(
+        String.format("Codename: %s", DebianTest.NAME),
+        "Architectures: amd64",
+        "Components: main",
+        "Date:",
+        "SHA256:",
+        "my_deb_repo/binary/amd64/Packages.gz",
+        "my_deb_repo/binary/amd64/Packages"
+    );
+
+    /**
      * Test storage.
      */
     private Storage storage;
@@ -132,20 +145,11 @@ class DebianTest {
             )
         );
         final Key release = this.debian.generateRelease().toCompletableFuture().join();
-        final ListOf<String> substrings = new ListOf<>(
-            String.format("Codename: %s", DebianTest.NAME),
-            "Architectures: amd64",
-            "Components: main",
-            "Date:",
-            "SHA256:",
-            "my_deb_repo/binary/amd64/Packages.gz",
-            "my_deb_repo/binary/amd64/Packages"
-        );
         MatcherAssert.assertThat(
             "Generates Release index",
             new PublisherAs(this.storage.value(release).join()).asciiString()
                 .toCompletableFuture().join(),
-            new StringContainsInOrder(substrings)
+            new StringContainsInOrder(DebianTest.RELEASE_LINES)
         );
         MatcherAssert.assertThat(
             "Generates Release.gpg file",
@@ -160,7 +164,7 @@ class DebianTest {
             ).asciiString().toCompletableFuture().join(),
             new AllOf<>(
                 new ListOf<Matcher<? super String>>(
-                    new StringContainsInOrder(substrings),
+                    new StringContainsInOrder(DebianTest.RELEASE_LINES),
                     new StringContains("-----BEGIN PGP SIGNED MESSAGE-----"),
                     new StringContains("Hash: SHA256"),
                     new StringContains("-----BEGIN PGP SIGNATURE-----"),
@@ -209,17 +213,7 @@ class DebianTest {
                 .toCompletableFuture().join(),
             new AllOf<>(
                 new ListOf<Matcher<? super String>>(
-                    new StringContainsInOrder(
-                        new ListOf<>(
-                            String.format("Codename: %s", DebianTest.NAME),
-                            "Architectures: amd64",
-                            "Components: main",
-                            "Date:",
-                            "SHA256:",
-                            "my_deb_repo/binary/amd64/Packages.gz",
-                            "my_deb_repo/binary/amd64/Packages"
-                        )
-                    ),
+                    new StringContainsInOrder(DebianTest.RELEASE_LINES),
                     new IsNot<>(
                         new StringContains("abc123 123 my_deb_repo/binary/amd64/Packages.gz")
                     ),
