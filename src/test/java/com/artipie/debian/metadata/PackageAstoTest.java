@@ -25,17 +25,13 @@ package com.artipie.debian.metadata;
 
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
-import com.artipie.asto.blocking.BlockingStorage;
 import com.artipie.asto.memory.InMemoryStorage;
 import com.artipie.asto.test.TestResource;
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
+import com.artipie.debian.GzArchive;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.cactoos.list.ListOf;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.IsEqual;
@@ -76,7 +72,7 @@ class PackageAstoTest {
             .toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Packages index has info about 3 packages",
-            this.archiveAsString(),
+            new GzArchive(this.asto).unpack(new Key.From(PackageAstoTest.KEY)),
             new StringContainsInOrder(
                 new ListOf<String>(
                     "Package: aglfn",
@@ -98,7 +94,7 @@ class PackageAstoTest {
         ).toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Packages index has info about 4 packages",
-            this.archiveAsString(),
+            new GzArchive(this.asto).unpack(new Key.From(PackageAstoTest.KEY)),
             new StringContainsInOrder(
                 new ListOf<String>(
                     "Package: aglfn",
@@ -120,13 +116,13 @@ class PackageAstoTest {
             .toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Packages index was created with added package",
-            this.archiveAsString(),
+            new GzArchive(this.asto).unpack(new Key.From(PackageAstoTest.KEY)),
             new StringContains(this.firstPackageInfo())
         );
     }
 
     @Test
-    void addsSeveralPackagesItemsWhenIndexIsNew() throws IOException {
+    void addsSeveralPackagesItemsWhenIndexIsNew() {
         new Package.Asto(this.asto)
             .add(
                 new ListOf<>(this.firstPackageInfo(), this.secondPackageInfo()),
@@ -134,7 +130,7 @@ class PackageAstoTest {
             ).toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Packages index was created with added packages",
-            this.archiveAsString(),
+            new GzArchive(this.asto).unpack(new Key.From(PackageAstoTest.KEY)),
             new StringContainsInOrder(
                 new ListOf<String>(
                     this.firstPackageInfo(),
@@ -173,26 +169,6 @@ class PackageAstoTest {
             "Size: 23",
             "MD5sum: e99a18c428cb78d5f2608536128922e03"
         );
-    }
-
-    private String archiveAsString() throws IOException {
-        try (
-            GzipCompressorInputStream gcis = new GzipCompressorInputStream(
-                new BufferedInputStream(
-                    new ByteArrayInputStream(
-                        new BlockingStorage(this.asto).value(new Key.From(PackageAstoTest.KEY))
-                    )
-                )
-            )
-        ) {
-            final ByteArrayOutputStream out = new ByteArrayOutputStream();
-            final byte[] buf = new byte[1024];
-            int cnt;
-            while (-1 != (cnt = gcis.read(buf))) {
-                out.write(buf, 0, cnt);
-            }
-            return out.toString();
-        }
     }
 
     private void verifyThatTempDirIsCleanedUp() throws IOException {

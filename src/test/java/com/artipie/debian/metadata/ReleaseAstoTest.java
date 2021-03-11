@@ -32,13 +32,11 @@ import com.artipie.asto.ext.PublisherAs;
 import com.artipie.asto.memory.InMemoryStorage;
 import com.artipie.asto.test.TestResource;
 import com.artipie.debian.Config;
+import com.artipie.debian.GzArchive;
 import com.artipie.http.slice.KeyFromPath;
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
-import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.cactoos.list.ListOf;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
@@ -154,7 +152,7 @@ class ReleaseAstoTest {
             new Key.From("dists/my-deb/main/binary-amd64/Packages.gz"), Content.EMPTY
         ).join();
         final Key key = new Key.From("dists/my-deb/main/binary-intel/Packages.gz");
-        this.asto.save(key, new Content.From(this.packed("abc123".getBytes()))).join();
+        new GzArchive(this.asto).packAndSave("abc123", key);
         final ListOf<String> content = new ListOf<>(
             "Codename: my-deb",
             "Architectures: amd64 intel",
@@ -198,7 +196,7 @@ class ReleaseAstoTest {
             new Key.From("dists/my-repo/main/binary-amd64/Packages.gz"), Content.EMPTY
         ).join();
         final Key key = new Key.From("dists/my-repo/main/binary-intel/Packages.gz");
-        this.asto.save(key, new Content.From(this.packed("xyz".getBytes()))).join();
+        new GzArchive(this.asto).packAndSave("xyz", key);
         final ListOf<String> content = new ListOf<>(
             "Codename: my-repo",
             "Architectures: amd64 intel",
@@ -240,7 +238,7 @@ class ReleaseAstoTest {
             new Key.From("dists/deb-test/main/binary-amd64/Packages.gz"), Content.EMPTY
         ).join();
         final Key key = new Key.From("dists/deb-test/main/binary-intel/Packages.gz");
-        this.asto.save(key, new Content.From(this.packed("098".getBytes()))).join();
+        new GzArchive(this.asto).packAndSave("098", key);
         final ListOf<String> content = new ListOf<>(
             "Codename: deb-test",
             "Architectures: amd64 intel",
@@ -303,15 +301,6 @@ class ReleaseAstoTest {
             ).gpgSignatureKey(),
             new IsEqual<>(new Key.From("dists/deb-repo/Release.gpg"))
         );
-    }
-
-    private byte[] packed(final byte[] bytes) throws IOException {
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try (GzipCompressorOutputStream gcos =
-            new GzipCompressorOutputStream(new BufferedOutputStream(baos))) {
-            gcos.write(bytes);
-        }
-        return baos.toByteArray();
     }
 
     private Config config(final boolean gpg, final String name, final YamlMappingBuilder yaml) {

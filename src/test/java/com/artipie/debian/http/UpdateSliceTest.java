@@ -28,21 +28,17 @@ import com.amihaiemil.eoyaml.YamlMapping;
 import com.artipie.asto.Content;
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
-import com.artipie.asto.blocking.BlockingStorage;
 import com.artipie.asto.memory.InMemoryStorage;
 import com.artipie.asto.test.TestResource;
 import com.artipie.debian.Config;
+import com.artipie.debian.GzArchive;
 import com.artipie.http.Headers;
 import com.artipie.http.hm.RsHasStatus;
 import com.artipie.http.hm.SliceHasResponse;
 import com.artipie.http.rq.RequestLine;
 import com.artipie.http.rq.RqMethod;
 import com.artipie.http.rs.RsStatus;
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.cactoos.list.ListOf;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.IsEqual;
@@ -116,8 +112,8 @@ class UpdateSliceTest {
     void uploadsAndUpdatesIndex() throws IOException {
         final Key.From release = new Key.From("dists/deb_repo/Release");
         this.asto.save(release, Content.EMPTY).join();
-        final String key = "dists/deb_repo/main/binary-amd64/Packages.gz";
-        new TestResource("Packages.gz").saveTo(this.asto, new Key.From(key));
+        final Key key = new Key.From("dists/deb_repo/main/binary-amd64/Packages.gz");
+        new TestResource("Packages.gz").saveTo(this.asto, key);
         MatcherAssert.assertThat(
             "Response is OK",
             new UpdateSlice(
@@ -141,7 +137,7 @@ class UpdateSliceTest {
             new IsEqual<>(true)
         );
         MatcherAssert.assertThat(
-            this.archiveAsString(key),
+            new GzArchive(this.asto).unpack(key),
             new StringContainsInOrder(
                 new ListOf<String>(
                     "Package: aglfn",
@@ -207,35 +203,6 @@ class UpdateSliceTest {
             this.asto.exists(new Key.From("main/corrupted.deb")).join(),
             new IsEqual<>(false)
         );
-    }
-
-    /**
-     * Uncompress gz archive from storage.
-     * @param key Storage item key
-     * @return Uncompressed content as string
-     * @throws IOException On error
-     * @todo #11:30min This method is duplicated in PackageSimpleTest, let's extract class from it.
-     *  Class should be located in test scope, accept Storage as a field and have one method to
-     *  uncompress storage item by key and return string.
-     */
-    private String archiveAsString(final String key) throws IOException {
-        try (
-            GzipCompressorInputStream gcis = new GzipCompressorInputStream(
-                new BufferedInputStream(
-                    new ByteArrayInputStream(
-                        new BlockingStorage(this.asto).value(new Key.From(key))
-                    )
-                )
-            )
-        ) {
-            final ByteArrayOutputStream out = new ByteArrayOutputStream();
-            final byte[] buf = new byte[1024];
-            int cnt;
-            while (-1 != (cnt = gcis.read(buf))) {
-                out.write(buf, 0, cnt);
-            }
-            return out.toString();
-        }
     }
 
 }
