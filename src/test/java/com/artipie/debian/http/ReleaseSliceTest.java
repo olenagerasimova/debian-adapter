@@ -27,6 +27,7 @@ import com.artipie.asto.Content;
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
 import com.artipie.asto.memory.InMemoryStorage;
+import com.artipie.debian.metadata.InRelease;
 import com.artipie.debian.metadata.Release;
 import com.artipie.http.hm.RsHasStatus;
 import com.artipie.http.hm.SliceHasResponse;
@@ -63,13 +64,15 @@ class ReleaseSliceTest {
 
     @Test
     void createsReleaseFileAndForwardsResponse() {
-        final Fake release = new Fake(new Key.From("any"));
+        final FakeRelease release = new FakeRelease(new Key.From("any"));
+        final FakeInRelease inrelease = new FakeInRelease();
         MatcherAssert.assertThat(
             "Response is CREATED",
             new ReleaseSlice(
                 new SliceSimple(new RsWithStatus(RsStatus.CREATED)),
                 this.asto,
-                release
+                release,
+                inrelease
             ),
             new SliceHasResponse(
                 new RsHasStatus(RsStatus.CREATED),
@@ -81,19 +84,26 @@ class ReleaseSliceTest {
             release.count.get(),
             new IsEqual<>(1)
         );
+        MatcherAssert.assertThat(
+            "InRelease file was created",
+            inrelease.count.get(),
+            new IsEqual<>(1)
+        );
     }
 
     @Test
     void doesNothingAndForwardsResponse() {
         final Key key = new Key.From("dists/my-repo/Release");
         this.asto.save(key, Content.EMPTY).join();
-        final Fake release = new Fake(key);
+        final FakeRelease release = new FakeRelease(key);
+        final FakeInRelease inrelease = new FakeInRelease();
         MatcherAssert.assertThat(
             "Response is OK",
             new ReleaseSlice(
                 new SliceSimple(new RsWithStatus(RsStatus.OK)),
                 this.asto,
-                release
+                release,
+                inrelease
             ),
             new SliceHasResponse(
                 new RsHasStatus(RsStatus.OK),
@@ -105,13 +115,18 @@ class ReleaseSliceTest {
             release.count.get(),
             new IsEqual<>(0)
         );
+        MatcherAssert.assertThat(
+            "InRelease file was not created",
+            inrelease.count.get(),
+            new IsEqual<>(0)
+        );
     }
 
     /**
      * Fake {@link Release} implementation for the test.
      * @since 0.2
      */
-    private static final class Fake implements Release {
+    private static final class FakeRelease implements Release {
 
         /**
          * Method calls count.
@@ -127,7 +142,7 @@ class ReleaseSliceTest {
          * Ctor.
          * @param key Release file key
          */
-        private Fake(final Key key) {
+        private FakeRelease(final Key key) {
             this.rfk = key;
             this.count = new AtomicInteger(0);
         }
@@ -151,6 +166,36 @@ class ReleaseSliceTest {
         @Override
         public Key gpgSignatureKey() {
             throw new NotImplementedException("Not implemented yet");
+        }
+    }
+
+    /**
+     * Fake implementation of {@link InRelease}.
+     * @since 0.4
+     */
+    private static final class FakeInRelease implements InRelease {
+
+        /**
+         * Method calls count.
+         */
+        private final AtomicInteger count;
+
+        /**
+         * Ctor.
+         */
+        private FakeInRelease() {
+            this.count = new AtomicInteger(0);
+        }
+
+        @Override
+        public CompletionStage<Void> generate(final Key release) {
+            this.count.incrementAndGet();
+            return CompletableFuture.allOf();
+        }
+
+        @Override
+        public Key key() {
+            return null;
         }
     }
 

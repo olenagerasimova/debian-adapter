@@ -24,18 +24,18 @@
 package com.artipie.debian;
 
 import com.amihaiemil.eoyaml.Yaml;
-import com.artipie.asto.Content;
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
 import com.artipie.asto.fs.FileStorage;
 import com.artipie.asto.memory.InMemoryStorage;
 import com.artipie.asto.test.TestResource;
 import com.artipie.debian.http.DebianSlice;
-import com.artipie.debian.misc.GpgClearsign;
 import com.artipie.http.slice.LoggingSlice;
 import com.artipie.vertx.VertxSliceServer;
 import com.jcabi.log.Logger;
 import io.vertx.reactivex.core.Vertx;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.regex.Pattern;
@@ -93,6 +93,11 @@ public final class DebianGpgSliceITCase {
      */
     private GenericContainer<?> cntn;
 
+    /**
+     * Vertx server port.
+     */
+    private int port;
+
     @BeforeEach
     void init() throws Exception {
         this.storage = new InMemoryStorage();
@@ -118,12 +123,12 @@ public final class DebianGpgSliceITCase {
                 )
             )
         );
-        final int port = this.server.start();
-        Testcontainers.exposeHostPorts(port);
+        this.port = this.server.start();
+        Testcontainers.exposeHostPorts(this.port);
         Files.write(
             this.tmp.resolve("sources.list"),
             String.format(
-                "deb http://host.testcontainers.internal:%d/ artipie main", port
+                "deb http://host.testcontainers.internal:%d/ artipie main", this.port
             ).getBytes()
         );
         this.cntn = new GenericContainer<>("debian")
@@ -140,14 +145,6 @@ public final class DebianGpgSliceITCase {
     @Test
     void installWithInReleaseFileWorks() throws Exception {
         this.copyPackage("aglfn_1.7-3_amd64.deb");
-        this.storage.save(
-            new Key.From("dists/artipie/InRelease"),
-            new Content.From(
-                new GpgClearsign(new TestResource("Release").asBytes()).signedContent(
-                    new TestResource("secret-keys.gpg").asBytes(), "1q2w3e4r5t6y7u"
-                )
-            )
-        ).join();
         MatcherAssert.assertThat(
             "InRelease file is used on update the world",
             this.exec("apt-get", "update"),
@@ -174,9 +171,24 @@ public final class DebianGpgSliceITCase {
         );
     }
 
+    /**
+     * Current apt-get version uses InRelease index if it is present in the repo and ignores
+     * Release and Release.gpg files. Release and Release.gpg can be required by some older clients,
+     * apt-get uses these files if InRelease is absent. We generate Release, Release.gpg and
+     * InRelease in {@link com.artipie.debian.http.ReleaseSlice}, so to make this test work
+     * it is necessary to remove InRelease index before calling apt-get.
+     * @throws Exception On error
+     */
     @Test
     void installWithReleaseFileWorks() throws Exception {
         this.copyPackage("aglfn_1.7-3_amd64.deb");
+        final HttpURLConnection con = (HttpURLConnection) new URL(
+            String.format("http://localhost:%d/main/aglfn_1.7-3_amd64.deb", this.port)
+        ).openConnection();
+        con.setRequestMethod("GET");
+        con.getResponseCode();
+        con.disconnect();
+        this.storage.delete(new Key.From("dists", "artipie", "InRelease")).join();
         MatcherAssert.assertThat(
             "Release file is used on update the world",
             this.exec("apt-get", "update"),
