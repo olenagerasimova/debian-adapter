@@ -27,20 +27,14 @@ import com.amihaiemil.eoyaml.Yaml;
 import com.artipie.asto.Content;
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
-import com.artipie.asto.blocking.BlockingStorage;
 import com.artipie.asto.ext.PublisherAs;
 import com.artipie.asto.memory.InMemoryStorage;
 import com.artipie.asto.test.ContentIs;
 import com.artipie.asto.test.TestResource;
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
-import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.cactoos.list.ListOf;
 import org.hamcrest.Matcher;
 import org.hamcrest.MatcherAssert;
@@ -135,7 +129,7 @@ class DebianTest {
         ).toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Generates Packages index",
-            this.archiveAsString(),
+            new GzArchive(this.storage).unpack(DebianTest.PACKAGES),
             new AllOf<>(
                 new ListOf<Matcher<? super String>>(
                     new StringContains("\n\n"),
@@ -179,15 +173,12 @@ class DebianTest {
         final String pckg = "pspp_1.2.0-3_amd64.deb";
         final Key.From key = new Key.From("some_repo", pckg);
         new TestResource(pckg).saveTo(this.storage, key);
-        this.storage.save(
-            DebianTest.PACKAGES,
-            new Content.From(this.archiveBytes(this.aglfn().getBytes(StandardCharsets.UTF_8)))
-        ).join();
+        new GzArchive(this.storage).pack(this.aglfn(), DebianTest.PACKAGES);
         this.debian.updatePackages(new ListOf<>(key), DebianTest.PACKAGES)
             .toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Packages index was updated",
-            this.archiveAsString(),
+            new GzArchive(this.storage).unpack(DebianTest.PACKAGES),
             new AllOf<>(
                 new ListOf<Matcher<? super String>>(
                     new StringContains("\n\n"),
@@ -228,34 +219,6 @@ class DebianTest {
             this.storage.value(new Key.From(String.format("%s.gpg", release.string()))).join(),
             new IsNot<>(new ContentIs(bytes))
         );
-    }
-
-    private String archiveAsString() throws IOException {
-        try (
-            GzipCompressorInputStream gcis = new GzipCompressorInputStream(
-                new BufferedInputStream(
-                    new ByteArrayInputStream(
-                        new BlockingStorage(this.storage).value(DebianTest.PACKAGES)
-                    )
-                )
-            )
-        ) {
-            final ByteArrayOutputStream out = new ByteArrayOutputStream();
-            final byte[] buf = new byte[1024];
-            int cnt;
-            while (-1 != (cnt = gcis.read(buf))) {
-                out.write(buf, 0, cnt);
-            }
-            return out.toString();
-        }
-    }
-
-    private byte[] archiveBytes(final byte[] bytes) throws IOException {
-        final ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try (GzipCompressorOutputStream gcos = new GzipCompressorOutputStream(out)) {
-            gcos.write(bytes);
-        }
-        return out.toByteArray();
     }
 
     private String release() {
