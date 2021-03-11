@@ -25,6 +25,7 @@ package com.artipie.debian.http;
 
 import com.artipie.asto.Storage;
 import com.artipie.debian.Config;
+import com.artipie.debian.metadata.InRelease;
 import com.artipie.debian.metadata.Release;
 import com.artipie.http.Response;
 import com.artipie.http.Slice;
@@ -58,15 +59,24 @@ public final class ReleaseSlice implements Slice {
     private final Release release;
 
     /**
+     * Repository InRelease index.
+     */
+    private final InRelease inrelease;
+
+    /**
      * Ctor.
      * @param origin Origin
      * @param asto Storage
      * @param release Release index
+     * @param inrelease InRelease index
+     * @checkstyle ParameterNumberCheck (5 lines)
      */
-    public ReleaseSlice(final Slice origin, final Storage asto, final Release release) {
+    public ReleaseSlice(final Slice origin, final Storage asto, final Release release,
+        final InRelease inrelease) {
         this.origin = origin;
         this.release = release;
         this.storage = asto;
+        this.inrelease = inrelease;
     }
 
     /**
@@ -76,7 +86,7 @@ public final class ReleaseSlice implements Slice {
      * @param config Repository configuration
      */
     public ReleaseSlice(final Slice origin, final Storage asto, final Config config) {
-        this(origin, asto, new Release.Asto(asto, config));
+        this(origin, asto, new Release.Asto(asto, config), new InRelease.Asto(asto, config));
     }
 
     @Override
@@ -94,7 +104,9 @@ public final class ReleaseSlice implements Slice {
                             this.origin.response(line, headers, body)
                         );
                     } else {
-                        res = this.release.create().thenApply(
+                        res = this.release.create().thenCompose(
+                            nothing ->  this.inrelease.generate(this.release.key())
+                        ).thenApply(
                             nothing -> this.origin.response(line, headers, body)
                         );
                     }
