@@ -97,6 +97,9 @@ public final class DebianGpgSliceITCase {
     void init() throws Exception {
         this.storage = new InMemoryStorage();
         new TestResource("public-key.asc").saveTo(new FileStorage(this.tmp));
+        final Storage settings = new InMemoryStorage();
+        final String key = "secret-keys.gpg";
+        new TestResource(key).saveTo(settings);
         this.server = new VertxSliceServer(
             DebianGpgSliceITCase.VERTX,
             new LoggingSlice(
@@ -107,8 +110,10 @@ public final class DebianGpgSliceITCase {
                         Yaml.createYamlMappingBuilder()
                             .add("Components", "main")
                             .add("Architectures", "amd64")
+                            .add("gpg_password", "1q2w3e4r5t6y7u")
+                            .add("gpg_secret_key", key)
                             .build(),
-                        new InMemoryStorage()
+                        settings
                     )
                 )
             )
@@ -172,17 +177,8 @@ public final class DebianGpgSliceITCase {
     @Test
     void installWithReleaseFileWorks() throws Exception {
         this.copyPackage("aglfn_1.7-3_amd64.deb");
-        new TestResource("Release").saveTo(this.storage, new Key.From("dists/artipie/Release"));
-        this.storage.save(
-            new Key.From("dists/artipie/Release.gpg"),
-            new Content.From(
-                new GpgClearsign(new TestResource("Release").asBytes()).signature(
-                    new TestResource("secret-keys.gpg").asBytes(), "1q2w3e4r5t6y7u"
-                )
-            )
-        ).join();
         MatcherAssert.assertThat(
-            "InRelease file is used on update the world",
+            "Release file is used on update the world",
             this.exec("apt-get", "update"),
             new AllOf<>(
                 new ListOf<Matcher<? super String>>(
