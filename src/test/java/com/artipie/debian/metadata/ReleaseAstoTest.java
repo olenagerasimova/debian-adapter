@@ -152,7 +152,7 @@ class ReleaseAstoTest {
             new Key.From("dists/my-deb/main/binary-amd64/Packages.gz"), Content.EMPTY
         ).join();
         final Key key = new Key.From("dists/my-deb/main/binary-intel/Packages.gz");
-        new GzArchive(this.asto).pack("abc123", key);
+        new GzArchive(this.asto).packAndSave("abc123", key);
         final ListOf<String> content = new ListOf<>(
             "Codename: my-deb",
             "Architectures: amd64 intel",
@@ -196,7 +196,7 @@ class ReleaseAstoTest {
             new Key.From("dists/my-repo/main/binary-amd64/Packages.gz"), Content.EMPTY
         ).join();
         final Key key = new Key.From("dists/my-repo/main/binary-intel/Packages.gz");
-        new GzArchive(this.asto).pack("xyz", key);
+        new GzArchive(this.asto).packAndSave("xyz", key);
         final ListOf<String> content = new ListOf<>(
             "Codename: my-repo",
             "Architectures: amd64 intel",
@@ -238,7 +238,7 @@ class ReleaseAstoTest {
             new Key.From("dists/deb-test/main/binary-amd64/Packages.gz"), Content.EMPTY
         ).join();
         final Key key = new Key.From("dists/deb-test/main/binary-intel/Packages.gz");
-        new GzArchive(this.asto).pack("098", key);
+        new GzArchive(this.asto).packAndSave("098", key);
         final ListOf<String> content = new ListOf<>(
             "Codename: deb-test",
             "Architectures: amd64 intel",

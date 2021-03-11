@@ -62,7 +62,7 @@ public final class GzArchive {
      * @param bytes Bytes to pack
      * @param key Storage key
      */
-    public void pack(final byte[] bytes, final Key key) {
+    public void packAndSave(final byte[] bytes, final Key key) {
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try (GzipCompressorOutputStream gcos =
             new GzipCompressorOutputStream(new BufferedOutputStream(baos))) {
@@ -78,8 +78,8 @@ public final class GzArchive {
      * @param content String to pack
      * @param key Storage key
      */
-    public void pack(final String content, final Key key) {
-        this.pack(content.getBytes(StandardCharsets.UTF_8), key);
+    public void packAndSave(final String content, final Key key) {
+        this.packAndSave(content.getBytes(StandardCharsets.UTF_8), key);
     }
 
     /**
