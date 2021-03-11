@@ -66,13 +66,18 @@ Architectures: amd64 #Space separated supported architectures set
 Components: main #Repository components set
 Date: Sat, 05 Dec 2020 10:35:57 UTC #Creation date
 SHA256: #checksums for Packages indexes
- eb8cb7a51d9fe47bde0a32a310b93c01dba531c6f8d14362552f65fcc4277af8 main/binary-amd64/Packages.gz
+  eb8cb7a51d9fe47bde0a32a310b93c01dba531c6f8d14362552f65fcc4277af8 1351 main/binary-amd64/Packages.gz
+  c1cfc96b4ca50645c57e10b65fcc89fd1b2b79eb495c9fa035613af7ff97dbff 2564 main/binary-amd64/Packages
 ```
 
 The most important fields here are `Architectures` (list of the [architectures](https://wiki.debian.org/SupportedArchitectures) 
 this repository supports separated by space) and `Components` (a whitespace separated list of 
 components or areas, in the layout above components are `main`, `contrib` and `non-free`) as they 
 define repository structure. 
+
+`SHA256` field contains list of the repository `Packages` indexes files along with their sha-256 
+checksum, size and filename relative to the directory of the `Release` file. Checksums data have 
+to be provided for uncompressed files as well even if they are not present in the repository.
 
 ## Packages index file
 
