@@ -99,27 +99,8 @@ public final class UpdateSlice implements Slice {
                                 nothing -> new RsWithStatus(RsStatus.BAD_REQUEST)
                             );
                         } else {
-                            final Release release = new Release.Asto(this.asto, this.config);
-                            res = new PackagesItem.Asto(this.asto).format(control, key).thenCompose(
-                                item -> CompletableFuture.allOf(
-                                    common.stream().map(
-                                        arc -> String.format(
-                                            "dists/%s/main/binary-%s/Packages.gz",
-                                            this.config.codename(), arc
-                                        )
-                                    ).map(
-                                        index -> new Package.Asto(this.asto)
-                                            .add(new ListOf<>(item), new Key.From(index))
-                                            .thenCompose(
-                                                nothing -> release.update(new Key.From(index))
-                                            ).thenCompose(
-                                                nothing -> new InRelease.Asto(
-                                                    this.asto, this.config
-                                                ).generate(release.key())
-                                            )
-                                    ).toArray(CompletableFuture[]::new)
-                                )
-                            ).thenApply(nothing -> StandardRs.OK);
+                            res = this.generateIndexes(key, control, common)
+                                .thenApply(nothing -> StandardRs.OK);
                         }
                         return res;
                     }
@@ -135,6 +116,36 @@ public final class UpdateSlice implements Slice {
                         return res;
                     }
             ).thenCompose(Function.identity())
+        );
+    }
+
+    /**
+     * Generates Packages, Release and InRelease indexes.
+     * @param key Deb package key
+     * @param control Control file content
+     * @param archs Architectures
+     * @return Completion action
+     */
+    private CompletionStage<Void> generateIndexes(final Key key, final String control,
+        final List<String> archs) {
+        final Release release = new Release.Asto(this.asto, this.config);
+        return new PackagesItem.Asto(this.asto).format(control, key).thenCompose(
+            item -> CompletableFuture.allOf(
+                archs.stream().map(
+                    arc -> String.format(
+                        "dists/%s/main/binary-%s/Packages.gz",
+                        this.config.codename(), arc
+                    )
+                ).map(
+                    index -> new Package.Asto(this.asto)
+                        .add(new ListOf<>(item), new Key.From(index))
+                        .thenCompose(nothing -> release.update(new Key.From(index)))
+                        .thenCompose(
+                            nothing -> new InRelease.Asto(this.asto, this.config)
+                                .generate(release.key())
+                        )
+                ).toArray(CompletableFuture[]::new)
+            )
         );
     }
 }
