@@ -83,7 +83,9 @@ class InReleaseAstoTest {
                     new StringContains(new String(new TestResource("Release").asBytes())),
                     new StringContains("-----BEGIN PGP SIGNED MESSAGE-----"),
                     new StringContains("Hash: SHA256"),
-                    new StringContains("-----BEGIN PGP SIGNATURE-----"),
+                    new StringContains(
+                        String.format("%s-----BEGIN PGP SIGNATURE-----", System.lineSeparator())
+                    ),
                     new StringContains("-----END PGP SIGNATURE-----")
                 )
             )

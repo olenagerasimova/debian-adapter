@@ -101,8 +101,7 @@ public final class GpgClearsign {
                 if (ahead != -1) {
                     do {
                         ahead = GpgClearsign.readInputLine(line, ahead, input);
-                        sgen.update((byte) '\r');
-                        sgen.update((byte) '\n');
+                        sgen.update(System.lineSeparator().getBytes());
                         GpgClearsign.processLine(armored, sgen, line.toByteArray());
                     }
                     while (ahead != -1);
