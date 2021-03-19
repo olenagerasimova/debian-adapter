@@ -109,7 +109,7 @@ public interface Release {
             return this.checksums()
                 .thenApply(
                     checksums -> String.join(
-                        "\n",
+                        System.lineSeparator(),
                         String.format("Codename: %s", this.config.codename()),
                         String.format("Architectures: %s", String.join(" ", this.config.archs())),
                         String.format("Components: %s", String.join(" ", this.config.components())),
@@ -256,14 +256,18 @@ public interface Release {
          */
         private static String addReplace(final String origin, final String key, final String repl) {
             final String res;
-            if (origin.contains(String.format("%s\n", key)) || origin.endsWith(key)) {
+            if (origin.contains(String.format("%s%s", key, System.lineSeparator()))
+                || origin.endsWith(key)) {
                 res = origin.replaceAll(
-                    String.format(" .* %s(\n|$)", Pattern.quote(key)), String.format("%s\n", repl)
+                    String.format(" .* %s(%s|$)", Pattern.quote(key), System.lineSeparator()),
+                    String.format("%s%s", repl, System.lineSeparator())
                 );
             } else {
-                res = String.format("%s\n%s", origin, repl);
+                res = String.format("%s%s%s", origin, System.lineSeparator(), repl);
             }
-            return res.replaceAll("\n+", "\n");
+            return res.replaceAll(
+                String.format("[%s]+", System.lineSeparator()), System.lineSeparator()
+            );
         }
     }
 }
