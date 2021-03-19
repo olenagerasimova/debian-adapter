@@ -210,8 +210,9 @@ class ReleaseAstoTest {
         );
         this.asto.save(
             new Key.From("dists/my-repo/Release"),
-            new Content.From(String.join(System.lineSeparator(), content)
-                .getBytes(StandardCharsets.UTF_8))
+            new Content.From(
+                String.join(System.lineSeparator(), content).getBytes(StandardCharsets.UTF_8)
+            )
         ).join();
         new Release.Asto(
             this.asto,
@@ -225,7 +226,7 @@ class ReleaseAstoTest {
             "Release file was updated",
             new PublisherAs(this.asto.value(new KeyFromPath("dists/my-repo/Release")).join())
                 .asciiString().toCompletableFuture().join(),
-            new IsEqual<>(String.join("\n", content))
+            new IsEqual<>(String.join(System.lineSeparator(), content))
         );
         MatcherAssert.assertThat(
             "Gpg file was created if necessary",
@@ -253,8 +254,9 @@ class ReleaseAstoTest {
         );
         this.asto.save(
             new Key.From("dists/deb-test/Release"),
-            new Content.From(String.join(System.lineSeparator(), content)
-                .getBytes(StandardCharsets.UTF_8))
+            new Content.From(
+                String.join(System.lineSeparator(), content).getBytes(StandardCharsets.UTF_8)
+            )
         ).join();
         new Release.Asto(
             this.asto,

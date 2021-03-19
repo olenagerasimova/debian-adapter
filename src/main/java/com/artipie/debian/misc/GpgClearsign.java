@@ -31,7 +31,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.security.Security;
 import java.util.Iterator;
 import org.bouncycastle.bcpg.ArmoredOutputStream;
@@ -102,7 +101,8 @@ public final class GpgClearsign {
                 if (ahead != -1) {
                     do {
                         ahead = GpgClearsign.readInputLine(line, ahead, input);
-                        sgen.update(System.lineSeparator().getBytes(StandardCharsets.US_ASCII));
+                        sgen.update((byte) '\r');
+                        sgen.update((byte) '\n');
                         GpgClearsign.processLine(armored, sgen, line.toByteArray());
                     }
                     while (ahead != -1);
