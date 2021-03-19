@@ -75,8 +75,10 @@ class UpdateSliceTest {
 
     @Test
     void uploadsAndCreatesIndex() {
-        final Key.From release = new Key.From("dists/my_repo/Release");
+        final Key release = new Key.From("dists/my_repo/Release");
+        final Key inrelease = new Key.From("dists/my_repo/InRelease");
         this.asto.save(release, Content.EMPTY).join();
+        this.asto.save(inrelease, Content.EMPTY).join();
         MatcherAssert.assertThat(
             "Response is OK",
             new UpdateSlice(
@@ -102,16 +104,22 @@ class UpdateSliceTest {
         );
         MatcherAssert.assertThat(
             "Release index updated",
-            this.asto.value(release)
-                .join().size().get(),
+            this.asto.value(release).join().size().get(),
+            new IsNot<>(new IsEqual<>(0L))
+        );
+        MatcherAssert.assertThat(
+            "InRelease index updated",
+            this.asto.value(inrelease).join().size().get(),
             new IsNot<>(new IsEqual<>(0L))
         );
     }
 
     @Test
     void uploadsAndUpdatesIndex() throws IOException {
-        final Key.From release = new Key.From("dists/deb_repo/Release");
+        final Key release = new Key.From("dists/deb_repo/Release");
+        final Key inrelease = new Key.From("dists/deb_repo/InRelease");
         this.asto.save(release, Content.EMPTY).join();
+        this.asto.save(inrelease, Content.EMPTY).join();
         final Key key = new Key.From("dists/deb_repo/main/binary-amd64/Packages.gz");
         new TestResource("Packages.gz").saveTo(this.asto, key);
         MatcherAssert.assertThat(
@@ -149,6 +157,11 @@ class UpdateSliceTest {
         MatcherAssert.assertThat(
             "Release index updated",
             this.asto.value(release).join().size().get(),
+            new IsNot<>(new IsEqual<>(0L))
+        );
+        MatcherAssert.assertThat(
+            "InRelease index updated",
+            this.asto.value(inrelease).join().size().get(),
             new IsNot<>(new IsEqual<>(0L))
         );
     }
