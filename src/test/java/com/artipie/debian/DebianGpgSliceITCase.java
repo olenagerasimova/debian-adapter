@@ -30,10 +30,12 @@ import com.artipie.asto.fs.FileStorage;
 import com.artipie.asto.memory.InMemoryStorage;
 import com.artipie.asto.test.TestResource;
 import com.artipie.debian.http.DebianSlice;
+import com.artipie.http.rs.RsStatus;
 import com.artipie.http.slice.LoggingSlice;
 import com.artipie.vertx.VertxSliceServer;
 import com.jcabi.log.Logger;
 import io.vertx.reactivex.core.Vertx;
+import java.io.DataOutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
@@ -43,6 +45,7 @@ import org.cactoos.list.ListOf;
 import org.hamcrest.Matcher;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.AllOf;
+import org.hamcrest.core.IsEqual;
 import org.hamcrest.core.IsNot;
 import org.hamcrest.core.StringContains;
 import org.hamcrest.text.MatchesPattern;
@@ -143,8 +146,21 @@ public final class DebianGpgSliceITCase {
     }
 
     @Test
-    void installWithInReleaseFileWorks() throws Exception {
-        this.copyPackage("aglfn_1.7-3_amd64.deb");
+    void putAndInstallWithInReleaseFileWorks() throws Exception {
+        final HttpURLConnection con = (HttpURLConnection) new URL(
+            String.format("http://localhost:%d/main/aglfn_1.7-3_amd64.deb", this.port)
+        ).openConnection();
+        con.setDoOutput(true);
+        con.setRequestMethod("PUT");
+        final DataOutputStream out = new DataOutputStream(con.getOutputStream());
+        out.write(new TestResource("aglfn_1.7-3_amd64.deb").asBytes());
+        out.close();
+        MatcherAssert.assertThat(
+            "Response for upload is OK",
+            con.getResponseCode(),
+            new IsEqual<>(Integer.parseInt(RsStatus.OK.code()))
+        );
+        con.disconnect();
         MatcherAssert.assertThat(
             "InRelease file is used on update the world",
             this.exec("apt-get", "update"),
@@ -152,7 +168,7 @@ public final class DebianGpgSliceITCase {
                 new ListOf<Matcher<? super String>>(
                     // @checkstyle LineLengthCheck (2 lines)
                     new MatchesPattern(Pattern.compile("[\\S\\s]*Get:1 http://host.testcontainers.internal:\\d+ artipie InRelease[\\S\\s]*")),
-                    new MatchesPattern(Pattern.compile("[\\S\\s]*Get:2 http://host.testcontainers.internal:\\d+ artipie/main amd64 Packages \\[1351 B][\\S\\s]*")),
+                    new MatchesPattern(Pattern.compile("[\\S\\s]*Get:2 http://host.testcontainers.internal:\\d+ artipie/main amd64 Packages \\[685 B][\\S\\s]*")),
                     new IsNot<>(new StringContains("Get:3"))
                 )
             )
