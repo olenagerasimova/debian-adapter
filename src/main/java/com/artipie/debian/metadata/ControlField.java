@@ -118,4 +118,18 @@ public interface ControlField {
             super("Version");
         }
     }
+
+    /**
+     * Filename.
+     * @since 0.5
+     */
+    final class Filename extends ByName {
+
+        /**
+         * Ctor.
+         */
+        public Filename() {
+            super("Filename");
+        }
+    }
 }
