@@ -140,11 +140,9 @@ public final class UpdateSlice implements Slice {
                     index -> new Package.Asto(this.asto)
                         .add(new ListOf<>(item), new Key.From(index))
                         .thenCompose(nothing -> release.update(new Key.From(index)))
-                        .thenCompose(
-                            nothing -> new InRelease.Asto(this.asto, this.config)
-                                .generate(release.key())
-                        )
                 ).toArray(CompletableFuture[]::new)
+            ).thenCompose(
+                nothing -> new InRelease.Asto(this.asto, this.config).generate(release.key())
             )
         );
     }

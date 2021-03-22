@@ -178,8 +178,8 @@ class ReleaseAstoTest {
             Matchers.allOf(
                 new StringContainsInOrder(content),
                 // @checkstyle LineLengthCheck (3 lines)
-                new StringContains(" 9751b63dcb589f0d84d20dcf5a0d347939c6f4f09d7911c40f330bfe6ffe686e 26 main/binary-intel/Packages.gz"),
-                new StringContains(" 6ca13d52ca70c883e0f0bb101e425a89e8624de51db2d2392593af6a84118090 6 main/binary-intel/Packages")
+                new StringContains(" 9751b63dcb589f0d84d20dcf5a0d347939c6f4f09d7911c40f330bfe6ffe686e 26 main/binary-intel/Packages.gz\n"),
+                new StringContains(" 6ca13d52ca70c883e0f0bb101e425a89e8624de51db2d2392593af6a84118090 6 main/binary-intel/Packages\n")
             )
         );
         MatcherAssert.assertThat(
@@ -217,7 +217,7 @@ class ReleaseAstoTest {
         // @checkstyle LineLengthCheck (3 lines)
         // @checkstyle MagicNumberCheck (1 line)
         content.set(5, " eca44f5be15c27f009b837cf98df6a359304e868f024cfaff7f139baa6768d16 23 main/binary-intel/Packages.gz");
-        content.add(" 3608bca1e44ea6c4d268eb6db02260269892c0b42b86bbf1e77a6fa16c3c9282 3 main/binary-intel/Packages");
+        content.add(" 3608bca1e44ea6c4d268eb6db02260269892c0b42b86bbf1e77a6fa16c3c9282 3 main/binary-intel/Packages\n");
         MatcherAssert.assertThat(
             "Release file was updated",
             new PublisherAs(this.asto.value(new KeyFromPath("dists/my-repo/Release")).join())
@@ -259,7 +259,7 @@ class ReleaseAstoTest {
         // @checkstyle LineLengthCheck (3 lines)
         // @checkstyle MagicNumberCheck (1 line)
         content.set(6, " 4a82f377b30e07bc43f712d4e5ac4783b9e53de23980753e121618357be09c3c 23 main/binary-intel/Packages.gz");
-        content.add(" 35e1d1aeed3f7179b02a0dfde8f4e826e191649ee2acfd6da6b2ce7a12aa0f8b 3 main/binary-intel/Packages");
+        content.add(" 35e1d1aeed3f7179b02a0dfde8f4e826e191649ee2acfd6da6b2ce7a12aa0f8b 3 main/binary-intel/Packages\n");
         MatcherAssert.assertThat(
             "Release file updated",
             new PublisherAs(this.asto.value(new KeyFromPath("dists/deb-test/Release")).join())

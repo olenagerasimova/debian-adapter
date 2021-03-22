@@ -261,7 +261,7 @@ public interface Release {
                     String.format(" .* %s(\n|$)", Pattern.quote(key)), String.format("%s\n", repl)
                 );
             } else {
-                res = String.format("%s\n%s", origin, repl);
+                res = String.format("%s\n%s\n", origin, repl);
             }
             return res.replaceAll("\n+", "\n");
         }
