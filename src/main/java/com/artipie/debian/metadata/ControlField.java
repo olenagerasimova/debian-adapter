@@ -90,4 +90,32 @@ public interface ControlField {
             super("Architecture");
         }
     }
+
+    /**
+     * Package.
+     * @since 0.5
+     */
+    final class Package extends ByName {
+
+        /**
+         * Ctor.
+         */
+        public Package() {
+            super("Package");
+        }
+    }
+
+    /**
+     * Version.
+     * @since 0.5
+     */
+    final class Version extends ByName {
+
+        /**
+         * Ctor.
+         */
+        public Version() {
+            super("Version");
+        }
+    }
 }
