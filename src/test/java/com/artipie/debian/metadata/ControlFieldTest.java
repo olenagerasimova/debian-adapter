@@ -69,6 +69,36 @@ class ControlFieldTest {
     }
 
     @Test
+    void extractsPackageField() {
+        MatcherAssert.assertThat(
+            new ControlField.Package().value(
+                String.join(
+                    "\n",
+                    "Package: xyz",
+                    "Version: 0.3",
+                    "Architecture: amd64 intell"
+                )
+            ),
+            Matchers.contains("xyz")
+        );
+    }
+
+    @Test
+    void extractsVersionField() {
+        MatcherAssert.assertThat(
+            new ControlField.Version().value(
+                String.join(
+                    "\n",
+                    "Package: 123",
+                    "Version: 0.987",
+                    "Architecture: amd32"
+                )
+            ),
+            Matchers.contains("0.987")
+        );
+    }
+
+    @Test
     void throwsExceptionWhenElementNotFound() {
         Assertions.assertThrows(
             NoSuchElementException.class,
