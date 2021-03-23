@@ -284,18 +284,7 @@ class UniquePackageTest {
     }
 
     private String abcPackageInfo() {
-        return String.join(
-            "\n",
-            "Package: abc",
-            "Version: 0.1",
-            "Architecture: all",
-            "Maintainer: Task Force",
-            "Installed-Size: 130",
-            "Section: The Force",
-            "Filename: some/debian/package.deb",
-            "Size: 23",
-            "MD5sum: e99a18c428cb38d5f260853678922e03"
-        );
+        return this.abcPackageInfo("my/repo/abc.deb");
     }
 
     private String xyzPackageInfo() {
@@ -314,18 +303,7 @@ class UniquePackageTest {
     }
 
     private String zeroPackageInfo() {
-        return String.join(
-            "\n",
-            "Package: zero",
-            "Version: 0.0",
-            "Architecture: all",
-            "Maintainer: Zero division",
-            "Installed-Size: 0",
-            "Section: Zero",
-            "Filename: zero/package.deb",
-            "Size: 0",
-            "MD5sum: 0000"
-        );
+        return this.abcPackageInfo("my/repo/zero.deb");
     }
 
     private String zeroPackageInfo(final String filename) {
