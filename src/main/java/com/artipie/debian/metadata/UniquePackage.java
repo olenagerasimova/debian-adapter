@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -80,10 +81,12 @@ public final class UniquePackage implements Package {
                         final Path latest = Files.createTempFile(temp, "latest-", ".gz");
                         res = new Copy(this.asto, new ListOf<>(index))
                             .copy(new FileStorage(temp))
-                            .thenAccept(
+                            .thenApply(
                                 nothing -> decompressAppendCompress(
                                     temp.resolve(index.string()), latest, items
                                 )
+                            ).thenCompose(
+                                this::remove
                             ).thenCompose(
                                 nothing -> new FileStorage(temp)
                                     .move(new Key.From(latest.getFileName().toString()), index)
@@ -99,6 +102,30 @@ public final class UniquePackage implements Package {
                 }
                 return res;
             }
+        );
+    }
+
+    /**
+     * Removes storage item from provided keys.
+     * @param keys Keys list
+     * @return Completed action
+     */
+    private CompletionStage<Void> remove(final List<String> keys) {
+        return CompletableFuture.allOf(
+            keys.stream().map(Key.From::new)
+            .map(
+                key -> this.asto.exists(key).thenCompose(
+                    exists -> {
+                        final CompletionStage<Void> res;
+                        if (exists) {
+                            res = this.asto.delete(key);
+                        } else {
+                            res = CompletableFuture.allOf();
+                        }
+                        return res;
+                    }
+                )
+            ).toArray(CompletableFuture[]::new)
         );
     }
 
@@ -132,8 +159,9 @@ public final class UniquePackage implements Package {
         ) {
             String line;
             StringBuilder item = new StringBuilder();
-            while ((line = rdr.readLine()) != null) {
-                if (line.isEmpty()) {
+            do {
+                line = rdr.readLine();
+                if (line == null || line.isEmpty()) {
                     final Optional<String> dupl = UniquePackage.duplicate(item.toString(), newbies);
                     if (dupl.isPresent()) {
                         duplicates.add(dupl.get());
@@ -144,15 +172,7 @@ public final class UniquePackage implements Package {
                 } else {
                     item.append(line).append('\n');
                 }
-            }
-            if (item.length() > 0) {
-                final Optional<String> dupl = UniquePackage.duplicate(item.toString(), newbies);
-                if (dupl.isPresent()) {
-                    duplicates.add(dupl.get());
-                } else {
-                    gop.write(item.append('\n').toString().getBytes(StandardCharsets.UTF_8));
-                }
-            }
+            } while (line != null);
             gop.write(bytes);
         } catch (final UnsupportedEncodingException err) {
             throw new IllegalStateException(err);

@@ -23,6 +23,7 @@
  */
 package com.artipie.debian.metadata;
 
+import com.artipie.asto.Content;
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
 import com.artipie.asto.memory.InMemoryStorage;
@@ -90,9 +91,10 @@ class UniquePackageTest {
 
     @Test
     void replacesOneExistingPackage() throws IOException {
+        final Key old = new Key.From("abc/old/package.deb");
+        this.asto.save(old, Content.EMPTY).join();
         new GzArchive(this.asto).packAndSave(
-            this.abcPackageInfo()
-                .replace("MD5sum: e99a18c428cb38d5f260853678922e03", "MD5sum: abc123"),
+            this.abcPackageInfo(old.string()),
             UniquePackageTest.KEY
         );
         new UniquePackage(this.asto)
@@ -103,6 +105,7 @@ class UniquePackageTest {
             new GzArchive(this.asto).unpack(UniquePackageTest.KEY),
             new IsEqual<>(this.abcPackageInfo())
         );
+        this.verifyOldPackageWasRemoved(old);
         this.verifyThatTempDirIsCleanedUp();
     }
 
@@ -123,10 +126,12 @@ class UniquePackageTest {
 
     @Test
     void replacesFirstDuplicatedPackage() throws IOException {
+        final Key old = new Key.From("zero/old/package.deb");
+        this.asto.save(old, Content.EMPTY).join();
         new GzArchive(this.asto).packAndSave(
             String.join(
                 "\n\n",
-                this.zeroPackageInfo().replace("Installed-Size: 0", "Installed-Size: 1"),
+                this.zeroPackageInfo(old.string()),
                 this.xyzPackageInfo()
             ),
             UniquePackageTest.KEY
@@ -145,16 +150,19 @@ class UniquePackageTest {
                 )
             )
         );
+        this.verifyOldPackageWasRemoved(old);
         this.verifyThatTempDirIsCleanedUp();
     }
 
     @Test
     void replacesLastDuplicatedPackage() throws IOException {
+        final Key old = new Key.From("zero/one/two/package.deb");
+        this.asto.save(old, Content.EMPTY).join();
         new GzArchive(this.asto).packAndSave(
             String.join(
                 "\n\n",
                 this.abcPackageInfo(),
-                this.zeroPackageInfo().replace("Architecture: all", "Architecture: amd64")
+                this.zeroPackageInfo(old.string())
             ),
             UniquePackageTest.KEY
         );
@@ -172,16 +180,19 @@ class UniquePackageTest {
                 )
             )
         );
+        this.verifyOldPackageWasRemoved(old);
         this.verifyThatTempDirIsCleanedUp();
     }
 
     @Test
     void replacesMiddleDuplicatedPackage() throws IOException {
+        final Key old = new Key.From("zero/one/one/package.deb");
+        this.asto.save(old, Content.EMPTY).join();
         new GzArchive(this.asto).packAndSave(
             String.join(
                 "\n\n",
                 this.abcPackageInfo(),
-                this.zeroPackageInfo().replace("Section: Zero", "Section: Zero-One-One"),
+                this.zeroPackageInfo(old.string()),
                 this.xyzPackageInfo()
             ),
             UniquePackageTest.KEY
@@ -200,6 +211,40 @@ class UniquePackageTest {
                 )
             )
         );
+        this.verifyOldPackageWasRemoved(old);
+        this.verifyThatTempDirIsCleanedUp();
+    }
+
+    @Test
+    void replacesTwoDuplicatedPackages() throws IOException {
+        final Key one = new Key.From("one/zero/package.deb");
+        this.asto.save(one, Content.EMPTY).join();
+        final Key two = new Key.From("two/abc/package.deb");
+        this.asto.save(two, Content.EMPTY).join();
+        new GzArchive(this.asto).packAndSave(
+            String.join(
+                "\n\n",
+                this.abcPackageInfo(two.string()),
+                this.zeroPackageInfo(one.string()),
+                this.xyzPackageInfo()
+            ),
+            UniquePackageTest.KEY
+        );
+        new UniquePackage(this.asto)
+            .add(
+                new ListOf<>(this.abcPackageInfo(), this.zeroPackageInfo()),
+                UniquePackageTest.KEY
+            ).toCompletableFuture().join();
+        MatcherAssert.assertThat(
+            "Packages index has info about 3 packages",
+            new GzArchive(this.asto).unpack(UniquePackageTest.KEY),
+            new IsEqual<>(
+                String.join(
+                    "\n\n", this.xyzPackageInfo(), this.abcPackageInfo(), this.zeroPackageInfo()
+                )
+            )
+        );
+        this.verifyOldPackageWasRemoved(one, two);
         this.verifyThatTempDirIsCleanedUp();
     }
 
@@ -210,6 +255,31 @@ class UniquePackageTest {
             Files.list(systemtemp)
                 .noneMatch(path -> path.getFileName().toString().startsWith("packages")),
             new IsEqual<>(true)
+        );
+    }
+
+    private void verifyOldPackageWasRemoved(final Key... keys) {
+        for (final Key key : keys) {
+            MatcherAssert.assertThat(
+                String.format("Key %s was removed", key),
+                this.asto.exists(key).join(),
+                new IsEqual<>(false)
+            );
+        }
+    }
+
+    private String abcPackageInfo(final String filename) {
+        return String.join(
+            "\n",
+            "Package: abc",
+            "Version: 0.1",
+            "Architecture: all",
+            "Maintainer: Task Force",
+            "Installed-Size: 130",
+            "Section: The Force",
+            String.format("Filename: %s", filename),
+            "Size: 23",
+            "MD5sum: e99a18c428cb38d5f260853678922e03"
         );
     }
 
@@ -253,6 +323,21 @@ class UniquePackageTest {
             "Installed-Size: 0",
             "Section: Zero",
             "Filename: zero/package.deb",
+            "Size: 0",
+            "MD5sum: 0000"
+        );
+    }
+
+    private String zeroPackageInfo(final String filename) {
+        return String.join(
+            "\n",
+            "Package: zero",
+            "Version: 0.0",
+            "Architecture: all",
+            "Maintainer: Zero division",
+            "Installed-Size: 0",
+            "Section: Zero",
+            String.format("Filename: %s", filename),
             "Size: 0",
             "MD5sum: 0000"
         );

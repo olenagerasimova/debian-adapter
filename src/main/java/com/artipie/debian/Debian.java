@@ -29,9 +29,9 @@ import com.artipie.asto.ext.ContentAs;
 import com.artipie.asto.rx.RxStorageWrapper;
 import com.artipie.debian.metadata.Control;
 import com.artipie.debian.metadata.InRelease;
-import com.artipie.debian.metadata.Package;
 import com.artipie.debian.metadata.PackagesItem;
 import com.artipie.debian.metadata.Release;
+import com.artipie.debian.metadata.UniquePackage;
 import hu.akarnokd.rxjava2.interop.SingleInterop;
 import io.reactivex.Observable;
 import io.reactivex.Single;
@@ -129,7 +129,7 @@ public interface Debian {
                 .collect((Callable<ArrayList<String>>) ArrayList::new, ArrayList::add)
                 .to(SingleInterop.get())
                 .thenCompose(
-                    list -> new Package.Asto(this.asto).add(list, packages)
+                    list -> new UniquePackage(this.asto).add(list, packages)
                 );
         }
 

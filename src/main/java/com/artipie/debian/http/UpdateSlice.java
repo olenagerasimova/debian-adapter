@@ -31,9 +31,9 @@ import com.artipie.debian.Config;
 import com.artipie.debian.metadata.Control;
 import com.artipie.debian.metadata.ControlField;
 import com.artipie.debian.metadata.InRelease;
-import com.artipie.debian.metadata.Package;
 import com.artipie.debian.metadata.PackagesItem;
 import com.artipie.debian.metadata.Release;
+import com.artipie.debian.metadata.UniquePackage;
 import com.artipie.http.Response;
 import com.artipie.http.Slice;
 import com.artipie.http.async.AsyncResponse;
@@ -137,7 +137,7 @@ public final class UpdateSlice implements Slice {
                         this.config.codename(), arc
                     )
                 ).map(
-                    index -> new Package.Asto(this.asto)
+                    index -> new UniquePackage(this.asto)
                         .add(new ListOf<>(item), new Key.From(index))
                         .thenCompose(nothing -> release.update(new Key.From(index)))
                 ).toArray(CompletableFuture[]::new)
