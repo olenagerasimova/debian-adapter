@@ -36,7 +36,10 @@ import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -49,13 +52,9 @@ import org.cactoos.list.ListOf;
  * Implementation of {@link Package} that checks uniqueness of the packages index records.
  * @since 0.5
  * @checkstyle ClassDataAbstractionCouplingCheck (500 lines)
+ * @checkstyle ExecutableStatementCountCheck (500 lines)
  */
 public final class UniquePackage implements Package {
-
-    /**
-     * Package index items separator.
-     */
-    private static final String SEP = "\n\n";
 
     /**
      * Abstract storage.
@@ -109,14 +108,13 @@ public final class UniquePackage implements Package {
      * @param decompress File to decompress
      * @param res Where to write the result
      * @param items Items to append
+     * @return List of the `Filename`s fields of the duplicated packages.
      */
-    @SuppressWarnings(
-        {"PMD.UnusedLocalVariable", "PMD.AssignmentInOperand", "PMD.PrematureDeclaration"}
-    )
-    private static void decompressAppendCompress(
+    @SuppressWarnings({"PMD.AssignmentInOperand", "PMD.CyclomaticComplexity"})
+    private static List<String> decompressAppendCompress(
         final Path decompress, final Path res, final Iterable<String> items
     ) {
-        final byte[] bytes = String.join(UniquePackage.SEP, items).getBytes(StandardCharsets.UTF_8);
+        final byte[] bytes = String.join("\n\n", items).getBytes(StandardCharsets.UTF_8);
         final Map<String, String> newbies = StreamSupport.stream(items.spliterator(), false)
             .collect(
                 Collectors.toMap(
@@ -124,6 +122,7 @@ public final class UniquePackage implements Package {
                     item -> new ControlField.Version().value(item).get(0)
                 )
             );
+        final List<String> duplicates = new ArrayList<>(5);
         try (
             GZIPInputStream gis = new GZIPInputStream(Files.newInputStream(decompress));
             BufferedReader rdr =
@@ -135,21 +134,50 @@ public final class UniquePackage implements Package {
             StringBuilder item = new StringBuilder();
             while ((line = rdr.readLine()) != null) {
                 if (line.isEmpty()) {
-                    gop.write(item.append('\n').toString().getBytes(StandardCharsets.UTF_8));
+                    final Optional<String> dupl = UniquePackage.duplicate(item.toString(), newbies);
+                    if (dupl.isPresent()) {
+                        duplicates.add(dupl.get());
+                    } else {
+                        gop.write(item.append('\n').toString().getBytes(StandardCharsets.UTF_8));
+                    }
                     item = new StringBuilder();
                 } else {
                     item.append(line).append('\n');
                 }
             }
             if (item.length() > 0) {
-                gop.write(item.toString().getBytes(StandardCharsets.UTF_8));
+                final Optional<String> dupl = UniquePackage.duplicate(item.toString(), newbies);
+                if (dupl.isPresent()) {
+                    duplicates.add(dupl.get());
+                } else {
+                    gop.write(item.append('\n').toString().getBytes(StandardCharsets.UTF_8));
+                }
             }
-            gop.write(UniquePackage.SEP.getBytes(StandardCharsets.UTF_8));
             gop.write(bytes);
         } catch (final UnsupportedEncodingException err) {
             throw new IllegalStateException(err);
         } catch (final IOException ioe) {
             throw new UncheckedIOException(ioe);
         }
+        return duplicates;
+    }
+
+    /**
+     * Checks whether item is present in the list of new packages to add. If so, returns package
+     * `Filename` field.
+     * @param item Packages item to check
+     * @param newbies Newly added packages names and versions
+     * @return Filename field value if package is a duplicate
+     */
+    private static Optional<String> duplicate(
+        final String item, final Map<String, String> newbies
+    ) {
+        final String npackage = new ControlField.Package().value(item).get(0);
+        Optional<String> res = Optional.empty();
+        if (newbies.containsKey(npackage)
+            && newbies.get(npackage).equals(new ControlField.Version().value(item).get(0))) {
+            res = Optional.of(new ControlField.Filename().value(item).get(0));
+        }
+        return res;
     }
 }
