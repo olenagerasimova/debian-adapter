@@ -303,7 +303,7 @@ class UniquePackageTest {
     }
 
     private String zeroPackageInfo() {
-        return this.abcPackageInfo("my/repo/zero.deb");
+        return this.zeroPackageInfo("my/repo/zero.deb");
     }
 
     private String zeroPackageInfo(final String filename) {
