@@ -65,6 +65,11 @@ SOFTWARE.
   </properties>
   <dependencies>
     <dependency>
+      <groupId>org.cqfn</groupId>
+      <artifactId>rio</artifactId>
+      <version>0.3</version>
+    </dependency>
+    <dependency>
       <groupId>com.jcabi</groupId>
       <artifactId>jcabi-log</artifactId>
     </dependency>

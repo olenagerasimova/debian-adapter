@@ -33,7 +33,7 @@ import com.artipie.asto.rx.RxStorageWrapper;
 import com.artipie.debian.Config;
 import com.artipie.debian.GpgConfig;
 import com.artipie.debian.misc.GpgClearsign;
-import com.artipie.debian.misc.UnpackedContent;
+import com.artipie.debian.misc.RosUnpackedContent;
 import hu.akarnokd.rxjava2.interop.SingleInterop;
 import io.reactivex.Observable;
 import java.nio.charset.StandardCharsets;
@@ -228,7 +228,7 @@ public interface Release {
                 content -> new ContentDigest(content, Digests.SHA256).hex()
             ).thenCompose(
                 hex -> this.asto.value(pkg).thenCompose(
-                    content -> new UnpackedContent(content).sizeAndDigest().thenApply(
+                    content -> new RosUnpackedContent(content).sizeAndDigest().thenApply(
                         data -> new ImmutablePair<>(
                             String.format(
                                 " %s %d %s", hex,
