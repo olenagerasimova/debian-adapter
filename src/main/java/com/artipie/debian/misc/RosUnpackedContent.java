@@ -41,7 +41,7 @@ import org.reactivestreams.Publisher;
 
 /**
  * Unpacked content that uses {@link ReactiveOutputStream}.
- * @since 0.5
+ * @since 0.6
  */
 public final class RosUnpackedContent {
 

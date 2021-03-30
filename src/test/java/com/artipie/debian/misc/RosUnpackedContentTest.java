@@ -32,7 +32,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Test for {@link RosUnpackedContent}.
- * @since 0.5
+ * @since 0.6
  */
 class RosUnpackedContentTest {
 
