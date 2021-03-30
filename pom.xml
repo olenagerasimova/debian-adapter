@@ -65,6 +65,11 @@ SOFTWARE.
   </properties>
   <dependencies>
     <dependency>
+      <groupId>org.cqfn</groupId>
+      <artifactId>rio</artifactId>
+      <version>0.3</version>
+    </dependency>
+    <dependency>
       <groupId>com.jcabi</groupId>
       <artifactId>jcabi-log</artifactId>
     </dependency>
@@ -102,7 +107,7 @@ SOFTWARE.
     <dependency>
       <groupId>com.artipie</groupId>
       <artifactId>asto</artifactId>
-      <version>0.33.1</version>
+      <version>0.34</version>
     </dependency>
     <dependency>
       <groupId>com.artipie</groupId>
