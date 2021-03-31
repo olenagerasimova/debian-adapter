@@ -62,8 +62,8 @@ public interface MultiDebian {
             throws IOException {
             final GZIPOutputStream gop = new GZIPOutputStream(res);
             final Map<String, String> packages = new HashMap<>(items.size());
-            for (InputStream in : items) {
-                this.appendPackages(gop, in, packages);
+            for (final InputStream inp : items) {
+                MergedPackages.appendPackages(gop, inp, packages);
             }
             gop.finish();
         }
@@ -72,15 +72,15 @@ public interface MultiDebian {
          * Appends items from provided InputStream to OutputStream, duplicated packages are not
          * appended.
          * @param out OutputStream to write the result
-         * @param in InputStream to read Packages index from
+         * @param inp InputStream to read Packages index from
          * @param packages Map with the appended packages
          * @throws IOException On IO error
          */
-        private void appendPackages(
-            final OutputStream out, final InputStream in, Map<String, String> packages
+        private static void appendPackages(
+            final OutputStream out, final InputStream inp, final Map<String, String> packages
         ) throws IOException {
-            GZIPInputStream gis = new GZIPInputStream(in);
-            BufferedReader rdr =
+            final GZIPInputStream gis = new GZIPInputStream(inp);
+            final BufferedReader rdr =
                 new BufferedReader(new InputStreamReader(gis, StandardCharsets.UTF_8));
             String line;
             StringBuilder item = new StringBuilder();
