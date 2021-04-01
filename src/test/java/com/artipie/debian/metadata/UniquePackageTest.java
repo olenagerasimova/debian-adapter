@@ -248,6 +248,43 @@ class UniquePackageTest {
         this.verifyThatTempDirIsCleanedUp();
     }
 
+    @Test
+    void worksWithPackagesWithDifferentVersionsCorrectly() throws IOException {
+        final Key one = new Key.From("one/abc/0.1/package.deb");
+        this.asto.save(one, Content.EMPTY).join();
+        final Key two = new Key.From("two/abc/0.2/package.deb");
+        this.asto.save(two, Content.EMPTY).join();
+        new GzArchive(this.asto).packAndSave(
+            String.join(
+                "\n\n",
+                this.abcPackageInfo(one.string()),
+                this.abcPackageInfo(two.string()).replace("0.1", "0.2")
+            ),
+            UniquePackageTest.KEY
+        );
+        new UniquePackage(this.asto).add(
+            new ListOf<>(
+                this.abcPackageInfo().replace("0.1", "0.2"),
+                this.abcPackageInfo().replace("0.1", "0.3")
+            ),
+            UniquePackageTest.KEY
+        ).toCompletableFuture().join();
+        MatcherAssert.assertThat(
+            "Packages index has info about 3 packages",
+            new GzArchive(this.asto).unpack(UniquePackageTest.KEY),
+            new IsEqual<>(
+                String.join(
+                    "\n\n",
+                    this.abcPackageInfo(one.string()),
+                    this.abcPackageInfo().replace("0.1", "0.2"),
+                    this.abcPackageInfo().replace("0.1", "0.3")
+                )
+            )
+        );
+        this.verifyOldPackageWasRemoved(two);
+        this.verifyThatTempDirIsCleanedUp();
+    }
+
     private void verifyThatTempDirIsCleanedUp() throws IOException {
         final Path systemtemp = Paths.get(System.getProperty("java.io.tmpdir"));
         MatcherAssert.assertThat(
