@@ -28,6 +28,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import org.apache.commons.lang3.StringUtils;
 import org.cactoos.list.ListOf;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.IsEqual;
@@ -38,19 +39,15 @@ import org.junit.jupiter.api.Test;
  * @since 0.6
  */
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
-class MultiDebianTest {
+class MultiPackagesTest {
 
     @Test
     void mergesPackages() throws IOException {
         final ByteArrayOutputStream res = new ByteArrayOutputStream();
         new MultiPackages.Unique().merge(
             new ListOf<InputStream>(
-                new ByteArrayInputStream(
-                    new GzArchive().compress(this.abcPackageInfo().getBytes(StandardCharsets.UTF_8))
-                ),
-                new ByteArrayInputStream(
-                    new GzArchive().compress(this.xyzPackageInfo().getBytes(StandardCharsets.UTF_8))
-                )
+                this.stream(this.abcPackageInfo()),
+                this.stream(this.xyzPackageInfo())
             ),
             res
         );
@@ -67,29 +64,9 @@ class MultiDebianTest {
         final ByteArrayOutputStream res = new ByteArrayOutputStream();
         new MultiPackages.Unique().merge(
             new ListOf<InputStream>(
-                new ByteArrayInputStream(
-                    new GzArchive().compress(
-                        String.join(
-                            "\n\n",
-                            this.abcPackageInfo(),
-                            this.zeroPackageInfo()
-                        ).getBytes(StandardCharsets.UTF_8)
-                    )
-                ),
-                new ByteArrayInputStream(
-                    new GzArchive().compress(
-                        this.zeroPackageInfo().getBytes(StandardCharsets.UTF_8)
-                    )
-                ),
-                new ByteArrayInputStream(
-                    new GzArchive().compress(
-                        String.join(
-                            "\n\n",
-                            this.xyzPackageInfo(),
-                            this.zeroPackageInfo()
-                        ).getBytes(StandardCharsets.UTF_8)
-                    )
-                )
+                this.stream(this.abcPackageInfo(), this.zeroPackageInfo()),
+                this.stream(this.zeroPackageInfo()),
+                this.stream(this.xyzPackageInfo(), this.zeroPackageInfo())
             ),
             res
         );
@@ -110,23 +87,9 @@ class MultiDebianTest {
         final String three = this.abcPackageInfo().replace("0.1", "0.3");
         new MultiPackages.Unique().merge(
             new ListOf<InputStream>(
-                new ByteArrayInputStream(
-                    new GzArchive().compress(
-                        String.join(
-                            "\n\n", two, this.abcPackageInfo()
-                        ).getBytes(StandardCharsets.UTF_8)
-                    )
-                ),
-                new ByteArrayInputStream(
-                    new GzArchive().compress(
-                        this.abcPackageInfo().getBytes(StandardCharsets.UTF_8)
-                    )
-                ),
-                new ByteArrayInputStream(
-                    new GzArchive().compress(
-                        String.join("\n\n", two, three).getBytes(StandardCharsets.UTF_8)
-                    )
-                )
+                this.stream(two, this.abcPackageInfo()),
+                this.stream(this.abcPackageInfo()),
+                this.stream(two, three)
             ),
             res
         );
@@ -178,6 +141,14 @@ class MultiDebianTest {
             "Filename: zero/division/package.deb",
             "Size: 0",
             "MD5sum: 0000"
+        );
+    }
+
+    private InputStream stream(final String... items) {
+        return new ByteArrayInputStream(
+            new GzArchive().compress(
+                StringUtils.join(items, "\n\n").getBytes(StandardCharsets.UTF_8)
+            )
         );
     }
 
