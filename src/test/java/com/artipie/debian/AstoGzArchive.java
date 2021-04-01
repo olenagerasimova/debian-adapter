@@ -31,7 +31,7 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * GzArchive: packs or unpacks.
- * @since 0.4
+ * @since 0.6
  */
 public final class AstoGzArchive {
 

@@ -34,7 +34,7 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 
 /**
  * Class to work with gz: pack and unpack bytes.
- * @since 0.6
+ * @since 0.4
  * @checkstyle NonStaticMethodCheck (500 lines)
  */
 public final class GzArchive {
