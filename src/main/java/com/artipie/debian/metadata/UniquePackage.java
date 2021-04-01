@@ -39,6 +39,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
@@ -143,13 +144,13 @@ public final class UniquePackage implements Package {
         final Path decompress, final Path res, final Iterable<String> items
     ) {
         final byte[] bytes = String.join("\n\n", items).getBytes(StandardCharsets.UTF_8);
-        final List<Pair<String, String>> newbies = StreamSupport.stream(items.spliterator(), false)
+        final Set<Pair<String, String>> newbies = StreamSupport.stream(items.spliterator(), false)
             .<Pair<String, String>>map(
                 item -> new ImmutablePair<>(
                     new ControlField.Package().value(item).get(0),
                     new ControlField.Version().value(item).get(0)
                 )
-            ).collect(Collectors.toList());
+            ).collect(Collectors.toSet());
         final List<String> duplicates = new ArrayList<>(5);
         try (
             GZIPInputStream gis = new GZIPInputStream(Files.newInputStream(decompress));
@@ -191,7 +192,7 @@ public final class UniquePackage implements Package {
      * @return Filename field value if package is a duplicate
      */
     private static Optional<String> duplicate(
-        final String item, final List<Pair<String, String>> newbies
+        final String item, final Set<Pair<String, String>> newbies
     ) {
         final Pair<String, String> pair = new ImmutablePair<>(
             new ControlField.Package().value(item).get(0),

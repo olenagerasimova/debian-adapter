@@ -30,9 +30,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -63,7 +63,7 @@ public interface MultiDebian {
         public void merge(final Collection<InputStream> items, final OutputStream res)
             throws IOException {
             final GZIPOutputStream gop = new GZIPOutputStream(res);
-            final List<Pair<String, String>> packages = new ArrayList<>(items.size());
+            final Set<Pair<String, String>> packages = new HashSet<>(items.size());
             for (final InputStream inp : items) {
                 MergedPackages.appendPackages(gop, inp, packages);
             }
@@ -79,7 +79,7 @@ public interface MultiDebian {
          * @throws IOException On IO error
          */
         private static void appendPackages(
-            final OutputStream out, final InputStream inp, final List<Pair<String, String>> packages
+            final OutputStream out, final InputStream inp, final Set<Pair<String, String>> packages
         ) throws IOException {
             final GZIPInputStream gis = new GZIPInputStream(inp);
             final BufferedReader rdr =
