@@ -23,16 +23,11 @@
  */
 package com.artipie.debian;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
-import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.cactoos.list.ListOf;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.IsEqual;
@@ -53,16 +48,16 @@ class MultiDebianTest {
         new MultiDebian.MergedPackages().merge(
             new ListOf<InputStream>(
                 new ByteArrayInputStream(
-                    this.pack(this.abcPackageInfo().getBytes(StandardCharsets.UTF_8))
+                    new GzArchive().compress(this.abcPackageInfo().getBytes(StandardCharsets.UTF_8))
                 ),
                 new ByteArrayInputStream(
-                    this.pack(this.xyzPackageInfo().getBytes(StandardCharsets.UTF_8))
+                    new GzArchive().compress(this.xyzPackageInfo().getBytes(StandardCharsets.UTF_8))
                 )
             ),
             res
         );
         MatcherAssert.assertThat(
-            this.unpack(res.toByteArray()),
+            new GzArchive().decompress(res.toByteArray()),
             new IsEqual<>(
                 String.join("\n\n", this.abcPackageInfo(), this.xyzPackageInfo(), "")
             )
@@ -99,32 +94,4 @@ class MultiDebianTest {
         );
     }
 
-    private byte[] pack(final byte[] data) {
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try (GzipCompressorOutputStream gcos =
-            new GzipCompressorOutputStream(new BufferedOutputStream(baos))) {
-            gcos.write(data);
-        } catch (final IOException err) {
-            throw new UncheckedIOException(err);
-        }
-        return baos.toByteArray();
-    }
-
-    private String unpack(final byte[] data) {
-        try (
-            GzipCompressorInputStream gcis = new GzipCompressorInputStream(
-                new BufferedInputStream(new ByteArrayInputStream(data))
-            )
-        ) {
-            final ByteArrayOutputStream out = new ByteArrayOutputStream();
-            final byte[] buf = new byte[1024];
-            int cnt;
-            while (-1 != (cnt = gcis.read(buf))) {
-                out.write(buf, 0, cnt);
-            }
-            return out.toString();
-        } catch (final IOException err) {
-            throw new UncheckedIOException(err);
-        }
-    }
 }

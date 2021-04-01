@@ -27,7 +27,7 @@ import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
 import com.artipie.asto.memory.InMemoryStorage;
 import com.artipie.asto.test.TestResource;
-import com.artipie.debian.GzArchive;
+import com.artipie.debian.AstoGzArchive;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -72,7 +72,7 @@ class PackageAstoTest {
             .toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Packages index has info about 3 packages",
-            new GzArchive(this.asto).unpack(new Key.From(PackageAstoTest.KEY)),
+            new AstoGzArchive(this.asto).unpack(new Key.From(PackageAstoTest.KEY)),
             new StringContainsInOrder(
                 new ListOf<String>(
                     "Package: aglfn",
@@ -94,7 +94,7 @@ class PackageAstoTest {
         ).toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Packages index has info about 4 packages",
-            new GzArchive(this.asto).unpack(new Key.From(PackageAstoTest.KEY)),
+            new AstoGzArchive(this.asto).unpack(new Key.From(PackageAstoTest.KEY)),
             new StringContainsInOrder(
                 new ListOf<String>(
                     "Package: aglfn",
@@ -116,7 +116,7 @@ class PackageAstoTest {
             .toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Packages index was created with added package",
-            new GzArchive(this.asto).unpack(new Key.From(PackageAstoTest.KEY)),
+            new AstoGzArchive(this.asto).unpack(new Key.From(PackageAstoTest.KEY)),
             new StringContains(this.firstPackageInfo())
         );
     }
@@ -130,7 +130,7 @@ class PackageAstoTest {
             ).toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Packages index was created with added packages",
-            new GzArchive(this.asto).unpack(new Key.From(PackageAstoTest.KEY)),
+            new AstoGzArchive(this.asto).unpack(new Key.From(PackageAstoTest.KEY)),
             new StringContainsInOrder(
                 new ListOf<String>(
                     this.firstPackageInfo(),

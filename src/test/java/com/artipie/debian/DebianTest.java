@@ -129,7 +129,7 @@ class DebianTest {
         ).toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Generates Packages index",
-            new GzArchive(this.storage).unpack(DebianTest.PACKAGES),
+            new AstoGzArchive(this.storage).unpack(DebianTest.PACKAGES),
             new AllOf<>(
                 new ListOf<Matcher<? super String>>(
                     new StringContains("\n\n"),
@@ -173,12 +173,12 @@ class DebianTest {
         final String pckg = "pspp_1.2.0-3_amd64.deb";
         final Key.From key = new Key.From("some_repo", pckg);
         new TestResource(pckg).saveTo(this.storage, key);
-        new GzArchive(this.storage).packAndSave(this.aglfn(), DebianTest.PACKAGES);
+        new AstoGzArchive(this.storage).packAndSave(this.aglfn(), DebianTest.PACKAGES);
         this.debian.updatePackages(new ListOf<>(key), DebianTest.PACKAGES)
             .toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Packages index was updated",
-            new GzArchive(this.storage).unpack(DebianTest.PACKAGES),
+            new AstoGzArchive(this.storage).unpack(DebianTest.PACKAGES),
             new AllOf<>(
                 new ListOf<Matcher<? super String>>(
                     new StringContains("\n\n"),
