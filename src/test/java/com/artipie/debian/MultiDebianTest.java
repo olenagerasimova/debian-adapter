@@ -36,10 +36,8 @@ import org.junit.jupiter.api.Test;
 /**
  * Test for {@link MultiDebian.MergedPackages}.
  * @since 0.6
- * @checkstyle ClassDataAbstractionCouplingCheck (500 lines)
- * @checkstyle MagicNumberCheck (500 lines)
  */
-@SuppressWarnings("PMD.AssignmentInOperand")
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class MultiDebianTest {
 
     @Test
@@ -61,6 +59,80 @@ class MultiDebianTest {
             new IsEqual<>(
                 String.join("\n\n", this.abcPackageInfo(), this.xyzPackageInfo(), "")
             )
+        );
+    }
+
+    @Test
+    void addsOnlyUniquePackages() throws IOException {
+        final ByteArrayOutputStream res = new ByteArrayOutputStream();
+        new MultiDebian.MergedPackages().merge(
+            new ListOf<InputStream>(
+                new ByteArrayInputStream(
+                    new GzArchive().compress(
+                        String.join(
+                            "\n\n",
+                            this.abcPackageInfo(),
+                            this.zeroPackageInfo()
+                        ).getBytes(StandardCharsets.UTF_8)
+                    )
+                ),
+                new ByteArrayInputStream(
+                    new GzArchive().compress(
+                        this.zeroPackageInfo().getBytes(StandardCharsets.UTF_8)
+                    )
+                ),
+                new ByteArrayInputStream(
+                    new GzArchive().compress(
+                        String.join(
+                            "\n\n",
+                            this.xyzPackageInfo(),
+                            this.zeroPackageInfo()
+                        ).getBytes(StandardCharsets.UTF_8)
+                    )
+                )
+            ),
+            res
+        );
+        MatcherAssert.assertThat(
+            new GzArchive().decompress(res.toByteArray()),
+            new IsEqual<>(
+                String.join(
+                    "\n\n", this.abcPackageInfo(), this.zeroPackageInfo(), this.xyzPackageInfo(), ""
+                )
+            )
+        );
+    }
+
+    @Test
+    void addsSamePackagesWithDiffVersions() throws IOException {
+        final ByteArrayOutputStream res = new ByteArrayOutputStream();
+        final String two = this.abcPackageInfo().replace("0.1", "0.2");
+        final String three = this.abcPackageInfo().replace("0.1", "0.3");
+        new MultiDebian.MergedPackages().merge(
+            new ListOf<InputStream>(
+                new ByteArrayInputStream(
+                    new GzArchive().compress(
+                        String.join(
+                            "\n\n", two, this.abcPackageInfo()
+                        ).getBytes(StandardCharsets.UTF_8)
+                    )
+                ),
+                new ByteArrayInputStream(
+                    new GzArchive().compress(
+                        this.abcPackageInfo().getBytes(StandardCharsets.UTF_8)
+                    )
+                ),
+                new ByteArrayInputStream(
+                    new GzArchive().compress(
+                        String.join("\n\n", two, three).getBytes(StandardCharsets.UTF_8)
+                    )
+                )
+            ),
+            res
+        );
+        MatcherAssert.assertThat(
+            new GzArchive().decompress(res.toByteArray()),
+            new IsEqual<>(String.join("\n\n", two, this.abcPackageInfo(), three, ""))
         );
     }
 
@@ -91,6 +163,21 @@ class MultiDebianTest {
             "Filename: my/repo/abc.deb",
             "Size: 23",
             "MD5sum: e99a18c428cb38d5f260853678922e03"
+        );
+    }
+
+    private String zeroPackageInfo() {
+        return String.join(
+            "\n",
+            "Package: zero",
+            "Version: 0.0",
+            "Architecture: all",
+            "Maintainer: Zero division",
+            "Installed-Size: 0",
+            "Section: Zero",
+            "Filename: zero/division/package.deb",
+            "Size: 0",
+            "MD5sum: 0000"
         );
     }
 
