@@ -38,7 +38,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -47,6 +46,8 @@ import java.util.stream.StreamSupport;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.cactoos.list.ListOf;
 
 /**
@@ -142,13 +143,13 @@ public final class UniquePackage implements Package {
         final Path decompress, final Path res, final Iterable<String> items
     ) {
         final byte[] bytes = String.join("\n\n", items).getBytes(StandardCharsets.UTF_8);
-        final Map<String, String> newbies = StreamSupport.stream(items.spliterator(), false)
-            .collect(
-                Collectors.toMap(
-                    item -> new ControlField.Package().value(item).get(0),
-                    item -> new ControlField.Version().value(item).get(0)
+        final List<Pair<String, String>> newbies = StreamSupport.stream(items.spliterator(), false)
+            .<Pair<String, String>>map(
+                item -> new ImmutablePair<>(
+                    new ControlField.Package().value(item).get(0),
+                    new ControlField.Version().value(item).get(0)
                 )
-            );
+            ).collect(Collectors.toList());
         final List<String> duplicates = new ArrayList<>(5);
         try (
             GZIPInputStream gis = new GZIPInputStream(Files.newInputStream(decompress));
@@ -190,12 +191,14 @@ public final class UniquePackage implements Package {
      * @return Filename field value if package is a duplicate
      */
     private static Optional<String> duplicate(
-        final String item, final Map<String, String> newbies
+        final String item, final List<Pair<String, String>> newbies
     ) {
-        final String npackage = new ControlField.Package().value(item).get(0);
+        final Pair<String, String> pair = new ImmutablePair<>(
+            new ControlField.Package().value(item).get(0),
+            new ControlField.Version().value(item).get(0)
+        );
         Optional<String> res = Optional.empty();
-        if (newbies.containsKey(npackage)
-            && newbies.get(npackage).equals(new ControlField.Version().value(item).get(0))) {
+        if (newbies.contains(pair)) {
             res = Optional.of(new ControlField.Filename().value(item).get(0));
         }
         return res;
