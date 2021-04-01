@@ -28,31 +28,26 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import org.apache.commons.lang3.StringUtils;
 import org.cactoos.list.ListOf;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.IsEqual;
 import org.junit.jupiter.api.Test;
 
 /**
- * Test for {@link MultiDebian.MergedPackages}.
+ * Test for {@link MultiPackages.Unique}.
  * @since 0.6
- * @checkstyle ClassDataAbstractionCouplingCheck (500 lines)
- * @checkstyle MagicNumberCheck (500 lines)
  */
-@SuppressWarnings("PMD.AssignmentInOperand")
-class MultiDebianTest {
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
+class MultiPackagesTest {
 
     @Test
     void mergesPackages() throws IOException {
         final ByteArrayOutputStream res = new ByteArrayOutputStream();
-        new MultiDebian.MergedPackages().merge(
+        new MultiPackages.Unique().merge(
             new ListOf<InputStream>(
-                new ByteArrayInputStream(
-                    new GzArchive().compress(this.abcPackageInfo().getBytes(StandardCharsets.UTF_8))
-                ),
-                new ByteArrayInputStream(
-                    new GzArchive().compress(this.xyzPackageInfo().getBytes(StandardCharsets.UTF_8))
-                )
+                this.stream(this.abcPackageInfo()),
+                this.stream(this.xyzPackageInfo())
             ),
             res
         );
@@ -61,6 +56,46 @@ class MultiDebianTest {
             new IsEqual<>(
                 String.join("\n\n", this.abcPackageInfo(), this.xyzPackageInfo(), "")
             )
+        );
+    }
+
+    @Test
+    void addsOnlyUniquePackages() throws IOException {
+        final ByteArrayOutputStream res = new ByteArrayOutputStream();
+        new MultiPackages.Unique().merge(
+            new ListOf<InputStream>(
+                this.stream(this.abcPackageInfo(), this.zeroPackageInfo()),
+                this.stream(this.zeroPackageInfo()),
+                this.stream(this.xyzPackageInfo(), this.zeroPackageInfo())
+            ),
+            res
+        );
+        MatcherAssert.assertThat(
+            new GzArchive().decompress(res.toByteArray()),
+            new IsEqual<>(
+                String.join(
+                    "\n\n", this.abcPackageInfo(), this.zeroPackageInfo(), this.xyzPackageInfo(), ""
+                )
+            )
+        );
+    }
+
+    @Test
+    void addsSamePackagesWithDiffVersions() throws IOException {
+        final ByteArrayOutputStream res = new ByteArrayOutputStream();
+        final String two = this.abcPackageInfo().replace("0.1", "0.2");
+        final String three = this.abcPackageInfo().replace("0.1", "0.3");
+        new MultiPackages.Unique().merge(
+            new ListOf<InputStream>(
+                this.stream(two, this.abcPackageInfo()),
+                this.stream(this.abcPackageInfo()),
+                this.stream(two, three)
+            ),
+            res
+        );
+        MatcherAssert.assertThat(
+            new GzArchive().decompress(res.toByteArray()),
+            new IsEqual<>(String.join("\n\n", two, this.abcPackageInfo(), three, ""))
         );
     }
 
@@ -91,6 +126,29 @@ class MultiDebianTest {
             "Filename: my/repo/abc.deb",
             "Size: 23",
             "MD5sum: e99a18c428cb38d5f260853678922e03"
+        );
+    }
+
+    private String zeroPackageInfo() {
+        return String.join(
+            "\n",
+            "Package: zero",
+            "Version: 0.0",
+            "Architecture: all",
+            "Maintainer: Zero division",
+            "Installed-Size: 0",
+            "Section: Zero",
+            "Filename: zero/division/package.deb",
+            "Size: 0",
+            "MD5sum: 0000"
+        );
+    }
+
+    private InputStream stream(final String... items) {
+        return new ByteArrayInputStream(
+            new GzArchive().compress(
+                StringUtils.join(items, "\n\n").getBytes(StandardCharsets.UTF_8)
+            )
         );
     }
 
