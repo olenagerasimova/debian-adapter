@@ -30,8 +30,8 @@ import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
 import com.artipie.asto.memory.InMemoryStorage;
 import com.artipie.asto.test.TestResource;
+import com.artipie.debian.AstoGzArchive;
 import com.artipie.debian.Config;
-import com.artipie.debian.GzArchive;
 import com.artipie.http.Headers;
 import com.artipie.http.hm.RsHasStatus;
 import com.artipie.http.hm.SliceHasResponse;
@@ -145,7 +145,7 @@ class UpdateSliceTest {
             new IsEqual<>(true)
         );
         MatcherAssert.assertThat(
-            new GzArchive(this.asto).unpack(key),
+            new AstoGzArchive(this.asto).unpack(key),
             new StringContainsInOrder(
                 new ListOf<String>(
                     "Package: aglfn",

@@ -31,8 +31,8 @@ import com.artipie.asto.Storage;
 import com.artipie.asto.ext.PublisherAs;
 import com.artipie.asto.memory.InMemoryStorage;
 import com.artipie.asto.test.TestResource;
+import com.artipie.debian.AstoGzArchive;
 import com.artipie.debian.Config;
-import com.artipie.debian.GzArchive;
 import com.artipie.http.slice.KeyFromPath;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -152,7 +152,7 @@ class ReleaseAstoTest {
             new Key.From("dists/my-deb/main/binary-amd64/Packages.gz"), Content.EMPTY
         ).join();
         final Key key = new Key.From("dists/my-deb/main/binary-intel/Packages.gz");
-        new GzArchive(this.asto).packAndSave("abc123", key);
+        new AstoGzArchive(this.asto).packAndSave("abc123", key);
         final ListOf<String> content = new ListOf<>(
             "Codename: my-deb",
             "Architectures: amd64 intel",
@@ -196,7 +196,7 @@ class ReleaseAstoTest {
             new Key.From("dists/my-repo/main/binary-amd64/Packages.gz"), Content.EMPTY
         ).join();
         final Key key = new Key.From("dists/my-repo/main/binary-intel/Packages.gz");
-        new GzArchive(this.asto).packAndSave("xyz", key);
+        new AstoGzArchive(this.asto).packAndSave("xyz", key);
         final ListOf<String> content = new ListOf<>(
             "Codename: my-repo",
             "Architectures: amd64 intel",
@@ -238,7 +238,7 @@ class ReleaseAstoTest {
             new Key.From("dists/deb-test/main/binary-amd64/Packages.gz"), Content.EMPTY
         ).join();
         final Key key = new Key.From("dists/deb-test/main/binary-intel/Packages.gz");
-        new GzArchive(this.asto).packAndSave("098", key);
+        new AstoGzArchive(this.asto).packAndSave("098", key);
         final ListOf<String> content = new ListOf<>(
             "Codename: deb-test",
             "Architectures: amd64 intel",

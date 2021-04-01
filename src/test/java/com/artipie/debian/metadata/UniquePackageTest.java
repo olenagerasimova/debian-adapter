@@ -28,7 +28,7 @@ import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
 import com.artipie.asto.memory.InMemoryStorage;
 import com.artipie.asto.test.TestResource;
-import com.artipie.debian.GzArchive;
+import com.artipie.debian.AstoGzArchive;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -77,11 +77,11 @@ class UniquePackageTest {
         new TestResource(UniquePackageTest.PCKG).saveTo(temp);
         MatcherAssert.assertThat(
             "Packages index has info about 3 packages",
-            new GzArchive(this.asto).unpack(UniquePackageTest.KEY),
+            new AstoGzArchive(this.asto).unpack(UniquePackageTest.KEY),
             new IsEqual<>(
                 String.join(
                     "\n\n",
-                    new GzArchive(temp).unpack(UniquePackageTest.KEY),
+                    new AstoGzArchive(temp).unpack(UniquePackageTest.KEY),
                     this.abcPackageInfo()
                 )
             )
@@ -93,7 +93,7 @@ class UniquePackageTest {
     void replacesOneExistingPackage() throws IOException {
         final Key old = new Key.From("abc/old/package.deb");
         this.asto.save(old, Content.EMPTY).join();
-        new GzArchive(this.asto).packAndSave(
+        new AstoGzArchive(this.asto).packAndSave(
             this.abcPackageInfo(old.string()),
             UniquePackageTest.KEY
         );
@@ -102,7 +102,7 @@ class UniquePackageTest {
             .toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Packages index has info about 1 package",
-            new GzArchive(this.asto).unpack(UniquePackageTest.KEY),
+            new AstoGzArchive(this.asto).unpack(UniquePackageTest.KEY),
             new IsEqual<>(this.abcPackageInfo())
         );
         this.verifyOldPackageWasRemoved(old);
@@ -112,13 +112,13 @@ class UniquePackageTest {
     @Test
     void doesNotReplacePackageWithAnotherVersion() throws IOException {
         final String second = this.abcPackageInfo().replace("Version: 0.1", "Version: 0.2");
-        new GzArchive(this.asto).packAndSave(second, UniquePackageTest.KEY);
+        new AstoGzArchive(this.asto).packAndSave(second, UniquePackageTest.KEY);
         new UniquePackage(this.asto)
             .add(new ListOf<>(this.abcPackageInfo()), UniquePackageTest.KEY)
             .toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Packages index has info about 2 packages",
-            new GzArchive(this.asto).unpack(UniquePackageTest.KEY),
+            new AstoGzArchive(this.asto).unpack(UniquePackageTest.KEY),
             new IsEqual<>(String.join("\n\n", second, this.abcPackageInfo()))
         );
         this.verifyThatTempDirIsCleanedUp();
@@ -128,7 +128,7 @@ class UniquePackageTest {
     void replacesFirstDuplicatedPackage() throws IOException {
         final Key old = new Key.From("zero/old/package.deb");
         this.asto.save(old, Content.EMPTY).join();
-        new GzArchive(this.asto).packAndSave(
+        new AstoGzArchive(this.asto).packAndSave(
             String.join(
                 "\n\n",
                 this.zeroPackageInfo(old.string()),
@@ -143,7 +143,7 @@ class UniquePackageTest {
             ).toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Packages index has info about 3 packages",
-            new GzArchive(this.asto).unpack(UniquePackageTest.KEY),
+            new AstoGzArchive(this.asto).unpack(UniquePackageTest.KEY),
             new IsEqual<>(
                 String.join(
                     "\n\n", this.xyzPackageInfo(), this.zeroPackageInfo(), this.abcPackageInfo()
@@ -158,7 +158,7 @@ class UniquePackageTest {
     void replacesLastDuplicatedPackage() throws IOException {
         final Key old = new Key.From("zero/one/two/package.deb");
         this.asto.save(old, Content.EMPTY).join();
-        new GzArchive(this.asto).packAndSave(
+        new AstoGzArchive(this.asto).packAndSave(
             String.join(
                 "\n\n",
                 this.abcPackageInfo(),
@@ -173,7 +173,7 @@ class UniquePackageTest {
             ).toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Packages index has info about 3 packages",
-            new GzArchive(this.asto).unpack(UniquePackageTest.KEY),
+            new AstoGzArchive(this.asto).unpack(UniquePackageTest.KEY),
             new IsEqual<>(
                 String.join(
                     "\n\n", this.abcPackageInfo(), this.xyzPackageInfo(), this.zeroPackageInfo()
@@ -188,7 +188,7 @@ class UniquePackageTest {
     void replacesMiddleDuplicatedPackage() throws IOException {
         final Key old = new Key.From("zero/one/one/package.deb");
         this.asto.save(old, Content.EMPTY).join();
-        new GzArchive(this.asto).packAndSave(
+        new AstoGzArchive(this.asto).packAndSave(
             String.join(
                 "\n\n",
                 this.abcPackageInfo(),
@@ -204,7 +204,7 @@ class UniquePackageTest {
             ).toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Packages index has info about 3 packages",
-            new GzArchive(this.asto).unpack(UniquePackageTest.KEY),
+            new AstoGzArchive(this.asto).unpack(UniquePackageTest.KEY),
             new IsEqual<>(
                 String.join(
                     "\n\n", this.abcPackageInfo(), this.xyzPackageInfo(), this.zeroPackageInfo()
@@ -221,7 +221,7 @@ class UniquePackageTest {
         this.asto.save(one, Content.EMPTY).join();
         final Key two = new Key.From("two/abc/package.deb");
         this.asto.save(two, Content.EMPTY).join();
-        new GzArchive(this.asto).packAndSave(
+        new AstoGzArchive(this.asto).packAndSave(
             String.join(
                 "\n\n",
                 this.abcPackageInfo(two.string()),
@@ -237,7 +237,7 @@ class UniquePackageTest {
             ).toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Packages index has info about 3 packages",
-            new GzArchive(this.asto).unpack(UniquePackageTest.KEY),
+            new AstoGzArchive(this.asto).unpack(UniquePackageTest.KEY),
             new IsEqual<>(
                 String.join(
                     "\n\n", this.xyzPackageInfo(), this.abcPackageInfo(), this.zeroPackageInfo()
@@ -254,7 +254,7 @@ class UniquePackageTest {
         this.asto.save(one, Content.EMPTY).join();
         final Key two = new Key.From("two/abc/0.2/package.deb");
         this.asto.save(two, Content.EMPTY).join();
-        new GzArchive(this.asto).packAndSave(
+        new AstoGzArchive(this.asto).packAndSave(
             String.join(
                 "\n\n",
                 this.abcPackageInfo(one.string()),
@@ -271,7 +271,7 @@ class UniquePackageTest {
         ).toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Packages index has info about 3 packages",
-            new GzArchive(this.asto).unpack(UniquePackageTest.KEY),
+            new AstoGzArchive(this.asto).unpack(UniquePackageTest.KEY),
             new IsEqual<>(
                 String.join(
                     "\n\n",

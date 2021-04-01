@@ -23,89 +23,60 @@
  */
 package com.artipie.debian;
 
-import com.artipie.asto.Content;
-import com.artipie.asto.Key;
-import com.artipie.asto.Storage;
-import com.artipie.asto.blocking.BlockingStorage;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 
 /**
- * GzArchive: packs or unpacks.
+ * Class to work with gz: pack and unpack bytes.
  * @since 0.4
- * @checkstyle ClassDataAbstractionCouplingCheck (500 lines)
+ * @checkstyle NonStaticMethodCheck (500 lines)
  */
 public final class GzArchive {
 
     /**
-     * Abstract storage.
+     * Compresses provided bytes in gz format.
+     * @param data Bytes to pack
+     * @return Packed bytes
      */
-    private final Storage asto;
-
-    /**
-     * Ctor.
-     * @param asto Abstract storage
-     */
-    public GzArchive(final Storage asto) {
-        this.asto = asto;
-    }
-
-    /**
-     * Compress provided bytes in gz format and adds item to storage by provided key.
-     * @param bytes Bytes to pack
-     * @param key Storage key
-     */
-    public void packAndSave(final byte[] bytes, final Key key) {
+    public byte[] compress(final byte[] data) {
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try (GzipCompressorOutputStream gcos =
             new GzipCompressorOutputStream(new BufferedOutputStream(baos))) {
-            gcos.write(bytes);
+            gcos.write(data);
         } catch (final IOException err) {
             throw new UncheckedIOException(err);
         }
-        this.asto.save(key, new Content.From(baos.toByteArray())).join();
+        return baos.toByteArray();
     }
 
     /**
-     * Compress provided string in gz format and adds item to storage by provided key.
-     * @param content String to pack
-     * @param key Storage key
-     */
-    public void packAndSave(final String content, final Key key) {
-        this.packAndSave(content.getBytes(StandardCharsets.UTF_8), key);
-    }
-
-    /**
-     * Unpacks storage item and returns unpacked content as string.
-     * @param key Storage item
-     * @return Unpacked string
+     * Decompresses provided gz packed data.
+     * @param data Bytes to unpack
+     * @return Unpacked data in string format
      * @checkstyle MagicNumberCheck (15 lines)
      */
     @SuppressWarnings("PMD.AssignmentInOperand")
-    public String unpack(final Key key) {
+    public String decompress(final byte[] data) {
+        final ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (
             GzipCompressorInputStream gcis = new GzipCompressorInputStream(
-                new BufferedInputStream(
-                    new ByteArrayInputStream(new BlockingStorage(this.asto).value(key))
-                )
+                new BufferedInputStream(new ByteArrayInputStream(data))
             )
         ) {
-            final ByteArrayOutputStream out = new ByteArrayOutputStream();
             final byte[] buf = new byte[1024];
             int cnt;
             while (-1 != (cnt = gcis.read(buf))) {
                 out.write(buf, 0, cnt);
             }
-            return out.toString();
         } catch (final IOException err) {
             throw new UncheckedIOException(err);
         }
+        return out.toString();
     }
 }
