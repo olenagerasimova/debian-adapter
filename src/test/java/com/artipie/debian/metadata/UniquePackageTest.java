@@ -254,7 +254,7 @@ class UniquePackageTest {
         this.asto.save(one, Content.EMPTY).join();
         final Key two = new Key.From("two/abc/0.2/package.deb");
         this.asto.save(two, Content.EMPTY).join();
-        new GzArchive(this.asto).packAndSave(
+        new AstoGzArchive(this.asto).packAndSave(
             String.join(
                 "\n\n",
                 this.abcPackageInfo(one.string()),
@@ -271,7 +271,7 @@ class UniquePackageTest {
         ).toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Packages index has info about 3 packages",
-            new GzArchive(this.asto).unpack(UniquePackageTest.KEY),
+            new AstoGzArchive(this.asto).unpack(UniquePackageTest.KEY),
             new IsEqual<>(
                 String.join(
                     "\n\n",
