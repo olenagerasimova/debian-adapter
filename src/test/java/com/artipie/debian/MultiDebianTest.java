@@ -34,7 +34,7 @@ import org.hamcrest.core.IsEqual;
 import org.junit.jupiter.api.Test;
 
 /**
- * Test for {@link MultiDebian.MergedPackages}.
+ * Test for {@link MultiPackages.Unique}.
  * @since 0.6
  */
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
@@ -43,7 +43,7 @@ class MultiDebianTest {
     @Test
     void mergesPackages() throws IOException {
         final ByteArrayOutputStream res = new ByteArrayOutputStream();
-        new MultiDebian.MergedPackages().merge(
+        new MultiPackages.Unique().merge(
             new ListOf<InputStream>(
                 new ByteArrayInputStream(
                     new GzArchive().compress(this.abcPackageInfo().getBytes(StandardCharsets.UTF_8))
@@ -65,7 +65,7 @@ class MultiDebianTest {
     @Test
     void addsOnlyUniquePackages() throws IOException {
         final ByteArrayOutputStream res = new ByteArrayOutputStream();
-        new MultiDebian.MergedPackages().merge(
+        new MultiPackages.Unique().merge(
             new ListOf<InputStream>(
                 new ByteArrayInputStream(
                     new GzArchive().compress(
@@ -108,7 +108,7 @@ class MultiDebianTest {
         final ByteArrayOutputStream res = new ByteArrayOutputStream();
         final String two = this.abcPackageInfo().replace("0.1", "0.2");
         final String three = this.abcPackageInfo().replace("0.1", "0.3");
-        new MultiDebian.MergedPackages().merge(
+        new MultiPackages.Unique().merge(
             new ListOf<InputStream>(
                 new ByteArrayInputStream(
                     new GzArchive().compress(

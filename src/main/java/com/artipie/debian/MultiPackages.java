@@ -42,7 +42,7 @@ import org.apache.commons.lang3.tuple.Pair;
  * MultiDebian merges metadata.
  * @since 0.6
  */
-public interface MultiDebian {
+public interface MultiPackages {
 
     /**
      * Merges provided indexes.
@@ -53,11 +53,12 @@ public interface MultiDebian {
     void merge(Collection<InputStream> items, OutputStream res) throws IOException;
 
     /**
-     * Implementation of {@link MultiDebian} that merges Packages indexes. Implementation
+     * Implementation of {@link MultiPackages} that merges Packages indexes checking for duplicates
+     * and writes list of the unique Packages to the output stream. Implementation
      * does not close input or output streams, these operations should be made from the outside.
      * @since 0.6
      */
-    final class MergedPackages implements MultiDebian {
+    final class Unique implements MultiPackages {
 
         @Override
         public void merge(final Collection<InputStream> items, final OutputStream res)
@@ -65,7 +66,7 @@ public interface MultiDebian {
             final GZIPOutputStream gop = new GZIPOutputStream(res);
             final Set<Pair<String, String>> packages = new HashSet<>(items.size());
             for (final InputStream inp : items) {
-                MergedPackages.appendPackages(gop, inp, packages);
+                Unique.appendPackages(gop, inp, packages);
             }
             gop.finish();
         }
