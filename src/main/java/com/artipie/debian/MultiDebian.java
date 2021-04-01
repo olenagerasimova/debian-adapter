@@ -30,11 +30,13 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 
 /**
  * MultiDebian merges metadata.
@@ -61,7 +63,7 @@ public interface MultiDebian {
         public void merge(final Collection<InputStream> items, final OutputStream res)
             throws IOException {
             final GZIPOutputStream gop = new GZIPOutputStream(res);
-            final Map<String, String> packages = new HashMap<>(items.size());
+            final List<Pair<String, String>> packages = new ArrayList<>(items.size());
             for (final InputStream inp : items) {
                 MergedPackages.appendPackages(gop, inp, packages);
             }
@@ -77,7 +79,7 @@ public interface MultiDebian {
          * @throws IOException On IO error
          */
         private static void appendPackages(
-            final OutputStream out, final InputStream inp, final Map<String, String> packages
+            final OutputStream out, final InputStream inp, final List<Pair<String, String>> packages
         ) throws IOException {
             final GZIPInputStream gis = new GZIPInputStream(inp);
             final BufferedReader rdr =
@@ -87,11 +89,13 @@ public interface MultiDebian {
             do {
                 line = rdr.readLine();
                 if (line == null || line.isEmpty()) {
-                    final String name = new ControlField.Package().value(item.toString()).get(0);
-                    final String version = new ControlField.Version().value(item.toString()).get(0);
-                    if (!(packages.containsKey(name) && packages.get(name).equals(version))) {
+                    final Pair<String, String> pair = new ImmutablePair<>(
+                        new ControlField.Package().value(item.toString()).get(0),
+                        new ControlField.Version().value(item.toString()).get(0)
+                    );
+                    if (!packages.contains(pair)) {
                         out.write(item.append('\n').toString().getBytes(StandardCharsets.UTF_8));
-                        packages.put(name, version);
+                        packages.add(pair);
                     }
                     item = new StringBuilder();
                 } else {
