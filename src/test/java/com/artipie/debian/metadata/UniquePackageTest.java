@@ -285,6 +285,41 @@ class UniquePackageTest {
         this.verifyThatTempDirIsCleanedUp();
     }
 
+    @Test
+    void handlesExtraLineBreaks() throws IOException {
+        new AstoGzArchive(this.asto).packAndSave(
+            String.join(
+                "\n\n\n",
+                this.abcPackageInfo(),
+                this.zeroPackageInfo(),
+                ""
+            ),
+            UniquePackageTest.KEY
+        );
+        new UniquePackage(this.asto)
+            .add(
+                new ListOf<>(String.format("%s\n\n", this.xyzPackageInfo())),
+                UniquePackageTest.KEY
+            )
+            .toCompletableFuture().join();
+        final Storage temp = new InMemoryStorage();
+        new TestResource(UniquePackageTest.PCKG).saveTo(temp);
+        MatcherAssert.assertThat(
+            "Packages index has info about 3 packages",
+            new AstoGzArchive(this.asto).unpack(UniquePackageTest.KEY),
+            new IsEqual<>(
+                String.join(
+                    "\n\n",
+                    this.abcPackageInfo(),
+                    this.zeroPackageInfo(),
+                    this.xyzPackageInfo(),
+                    ""
+                )
+            )
+        );
+        this.verifyThatTempDirIsCleanedUp();
+    }
+
     private void verifyThatTempDirIsCleanedUp() throws IOException {
         final Path systemtemp = Paths.get(System.getProperty("java.io.tmpdir"));
         MatcherAssert.assertThat(

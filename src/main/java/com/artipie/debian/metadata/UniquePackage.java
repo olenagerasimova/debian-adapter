@@ -163,7 +163,7 @@ public final class UniquePackage implements Package {
             StringBuilder item = new StringBuilder();
             do {
                 line = rdr.readLine();
-                if (line == null || line.isEmpty()) {
+                if ((line == null || line.isEmpty()) && item.length() > 0) {
                     final Optional<String> dupl = UniquePackage.duplicate(item.toString(), newbies);
                     if (dupl.isPresent()) {
                         duplicates.add(dupl.get());
@@ -171,7 +171,7 @@ public final class UniquePackage implements Package {
                         gop.write(item.append('\n').toString().getBytes(StandardCharsets.UTF_8));
                     }
                     item = new StringBuilder();
-                } else {
+                } else if (line != null && !line.isEmpty()) {
                     item.append(line).append('\n');
                 }
             } while (line != null);
