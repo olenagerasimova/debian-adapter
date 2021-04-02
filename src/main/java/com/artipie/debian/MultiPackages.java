@@ -89,7 +89,7 @@ public interface MultiPackages {
             StringBuilder item = new StringBuilder();
             do {
                 line = rdr.readLine();
-                if (line == null || line.isEmpty()) {
+                if ((line == null || line.isEmpty()) && item.length() > 0) {
                     final Pair<String, String> pair = new ImmutablePair<>(
                         new ControlField.Package().value(item.toString()).get(0),
                         new ControlField.Version().value(item.toString()).get(0)
@@ -99,7 +99,7 @@ public interface MultiPackages {
                         packages.add(pair);
                     }
                     item = new StringBuilder();
-                } else {
+                } else if (line != null && !line.isEmpty()) {
                     item.append(line).append('\n');
                 }
             } while (line != null);

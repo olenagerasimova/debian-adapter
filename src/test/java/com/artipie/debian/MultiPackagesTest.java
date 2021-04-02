@@ -99,6 +99,26 @@ class MultiPackagesTest {
         );
     }
 
+    @Test
+    void handlesExtraLineBreaks() throws IOException {
+        final ByteArrayOutputStream res = new ByteArrayOutputStream();
+        new MultiPackages.Unique().merge(
+            new ListOf<InputStream>(
+                this.stream(String.join("\n\n\n", this.abcPackageInfo(), this.zeroPackageInfo())),
+                this.stream(String.format("%s\n\n", this.xyzPackageInfo()))
+            ),
+            res
+        );
+        MatcherAssert.assertThat(
+            new GzArchive().decompress(res.toByteArray()),
+            new IsEqual<>(
+                String.join(
+                    "\n\n", this.abcPackageInfo(), this.zeroPackageInfo(), this.xyzPackageInfo(), ""
+                )
+            )
+        );
+    }
+
     private String xyzPackageInfo() {
         return String.join(
             "\n",
@@ -145,10 +165,12 @@ class MultiPackagesTest {
     }
 
     private InputStream stream(final String... items) {
+        return this.stream(StringUtils.join(items, "\n\n"));
+    }
+
+    private InputStream stream(final String item) {
         return new ByteArrayInputStream(
-            new GzArchive().compress(
-                StringUtils.join(items, "\n\n").getBytes(StandardCharsets.UTF_8)
-            )
+            new GzArchive().compress(item.getBytes(StandardCharsets.UTF_8))
         );
     }
 
