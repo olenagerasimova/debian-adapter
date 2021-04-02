@@ -300,10 +300,7 @@ class UniquePackageTest {
             .add(
                 new ListOf<>(String.format("%s\n\n", this.xyzPackageInfo())),
                 UniquePackageTest.KEY
-            )
-            .toCompletableFuture().join();
-        final Storage temp = new InMemoryStorage();
-        new TestResource(UniquePackageTest.PCKG).saveTo(temp);
+            ).toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Packages index has info about 3 packages",
             new AstoGzArchive(this.asto).unpack(UniquePackageTest.KEY),
