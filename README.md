@@ -130,3 +130,21 @@ $ mvn clean install -Pqulice
 ```
 
 To avoid build errors use Maven 3.2+.
+
+## Benchmarking
+
+Here is general algorithm to run benchmarks:
+ 1. Build `rpm-adapter` with `bench` Maven profile enabled: `mvn package -Pbench`
+ 2. Copy dependencies to `target/` dir: `mvn dependency:copy-dependencies`
+ 3. Create directory and copy resources required for test into this directory
+ 4. Run benchmarks with `env BENCH_DIR=/tmp/debian-test java -cp "target/benchmarks.jar:target/classes/*:target/dependency/*" org.openjdk.jmh.Main BenchToRun`, 
+ where `/tmp/debian-test` is a directory with resources for tests, `BenchToRun` is benchmark class name.
+
+There are several benchmarks in debian-adapter: `IndexMergeBench` to test indexes merging and other. 
+
+### IndexMergeBench
+
+`IndexMergeBench` calls `MultiPackages.Unique.merge()` to perform Packages indexes merging. To run 
+this benchmark it's necessary to provide gziped Packages indexes in the test directory, all the 
+files from the directory will be merged. Sample Packages indexes can be found 
+[here](https://artipie.s3.amazonaws.com/debian-test/debian-merge.tar.gz).
