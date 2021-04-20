@@ -58,8 +58,8 @@ import org.openjdk.jmh.infra.Blackhole;
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @State(Scope.Benchmark)
-@Warmup(iterations = 2)
-@Measurement(iterations = 2)
+@Warmup(iterations = 5)
+@Measurement(iterations = 20)
 public class IndexMergeBench {
 
     /**
