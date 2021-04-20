@@ -25,14 +25,12 @@
 package com.artipie.debian.benchmarks;
 
 import com.artipie.debian.MultiPackages;
-import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -69,30 +67,27 @@ public class IndexMergeBench {
     private static final String BENCH_DIR = System.getenv("BENCH_DIR");
 
     /**
-     * Benchmark directory.
+     * Input data.
      */
-    private Path dir;
+    private List<byte[]> input;
 
     @Setup
     public void setup() throws IOException {
         if (IndexMergeBench.BENCH_DIR == null) {
             throw new IllegalStateException("BENCH_DIR environment variable must be set");
         }
-        this.dir = Paths.get(IndexMergeBench.BENCH_DIR);
+        try (Stream<Path> files = Files.list(Paths.get(IndexMergeBench.BENCH_DIR))) {
+            this.input = files.map(
+                path -> new Unchecked<>(() -> Files.readAllBytes(path)).value()
+            ).collect(Collectors.toList());
+        }
     }
 
     @Benchmark
     public void run(final Blackhole bhl) throws IOException {
-        List<InputStream> input = Collections.emptyList();
-        try (Stream<Path> files =  Files.list(this.dir)) {
-            input = files.map(
-                path -> new Unchecked<>(() -> Files.newInputStream(path)).value()
-            ).map(BufferedInputStream::new).collect(Collectors.toList());
-            new MultiPackages.Unique().merge(input, new ByteArrayOutputStream());
-        } finally {
-            for (final InputStream item : input) {
-                item.close();
-            }
-        }
+        new MultiPackages.Unique().merge(
+            this.input.stream().map(ByteArrayInputStream::new).collect(Collectors.toList()),
+            new ByteArrayOutputStream()
+        );
     }
 }
