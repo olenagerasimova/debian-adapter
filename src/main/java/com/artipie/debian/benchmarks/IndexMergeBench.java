@@ -54,6 +54,7 @@ import org.openjdk.jmh.infra.Blackhole;
  * @since 0.8
  * @checkstyle DesignForExtensionCheck (500 lines)
  * @checkstyle JavadocMethodCheck (500 lines)
+ * @checkstyle MagicNumberCheck (500 lines)
  */
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
