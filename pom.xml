@@ -62,6 +62,7 @@ SOFTWARE.
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
     <org.bouncycastle.version>1.57</org.bouncycastle.version>
+    <jmh.version>1.29</jmh.version>
   </properties>
   <dependencies>
     <dependency>
@@ -196,6 +197,16 @@ SOFTWARE.
       <artifactId>bcprov-jdk15on</artifactId>
       <version>${org.bouncycastle.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.openjdk.jmh</groupId>
+      <artifactId>jmh-core</artifactId>
+      <version>${jmh.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.openjdk.jmh</groupId>
+      <artifactId>jmh-generator-annprocess</artifactId>
+      <version>${jmh.version}</version>
+    </dependency>
   </dependencies>
   <build>
     <testResources>
@@ -250,6 +261,9 @@ SOFTWARE.
                   </limits>
                 </rule>
               </rules>
+              <excludes>
+                <exclude>com/artipie/debian/benchmarks/**/*</exclude>
+              </excludes>
             </configuration>
           </execution>
           <execution>
@@ -274,6 +288,7 @@ SOFTWARE.
           <excludes combine.children="append">
             <exclude>checkstyle:.*/src/test/resources/.*</exclude>
             <exclude>pmd:.*/src/test/resources/.*</exclude>
+            <exclude>pmd:.*/src/main/java/com/artipie/debian/benchmarks/.*</exclude>
           </excludes>
           <license>file:${basedir}/LICENSE.txt</license>
         </configuration>
@@ -295,4 +310,65 @@ SOFTWARE.
       </plugin>
     </plugins>
   </build>
+  <profiles>
+    <profile>
+      <id>bench</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <version>3.2.4</version>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>shade</goal>
+                </goals>
+                <configuration>
+                  <finalName>benchmarks</finalName>
+                  <transformers>
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                      <mainClass>org.openjdk.jmh.Main</mainClass>
+                    </transformer>
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                  </transformers>
+                  <filters>
+                    <filter>
+                      <!--
+                          Shading signed JARs will fail without this.
+                          http://stackoverflow.com/questions/999489/invalid-signature-file-when-attempting-to-run-a-jar
+                      -->
+                      <artifact>*:*</artifact>
+                      <excludes>
+                        <exclude>META-INF/*.SF</exclude>
+                        <exclude>META-INF/*.DSA</exclude>
+                        <exclude>META-INF/*.RSA</exclude>
+                      </excludes>
+                    </filter>
+                  </filters>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>copy-dependencies</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>copy-dependencies</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <includeScope>runtime</includeScope>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
