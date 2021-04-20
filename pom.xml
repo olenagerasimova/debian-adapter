@@ -262,7 +262,7 @@ SOFTWARE.
                 </rule>
               </rules>
               <excludes>
-                <exclude>com/artipie/rpm/benchmarks/**/*</exclude>
+                <exclude>com/artipie/debian/benchmarks/**/*</exclude>
               </excludes>
             </configuration>
           </execution>

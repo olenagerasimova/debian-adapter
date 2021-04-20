@@ -26,10 +26,9 @@ package com.artipie.debian.benchmarks;
 
 import com.artipie.debian.MultiPackages;
 import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -38,7 +37,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.io.FileUtils;
 import org.cactoos.scalar.Unchecked;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -48,7 +46,6 @@ import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
@@ -75,42 +72,26 @@ public class IndexMergeBench {
      */
     private Path dir;
 
-    /**
-     * Temp directory for the result.
-     */
-    private Path temp;
-
     @Setup
     public void setup() throws IOException {
         if (IndexMergeBench.BENCH_DIR == null) {
             throw new IllegalStateException("BENCH_DIR environment variable must be set");
         }
         this.dir = Paths.get(IndexMergeBench.BENCH_DIR);
-        this.temp = Files.createTempDirectory("deb-index-merge-bench-res");
     }
 
     @Benchmark
     public void run(final Blackhole bhl) throws IOException {
         List<InputStream> input = Collections.emptyList();
-        try (
-            OutputStream out = new BufferedOutputStream(
-                Files.newOutputStream(Files.createTempFile(this.temp, "res-", ".gz"))
-            );
-            Stream<Path> files =  Files.list(this.dir)
-        ) {
+        try (Stream<Path> files =  Files.list(this.dir)) {
             input = files.map(
                 path -> new Unchecked<>(() -> Files.newInputStream(path)).value()
             ).map(BufferedInputStream::new).collect(Collectors.toList());
-            new MultiPackages.Unique().merge(input, out);
+            new MultiPackages.Unique().merge(input, new ByteArrayOutputStream());
         } finally {
             for (final InputStream item : input) {
                 item.close();
             }
         }
-    }
-
-    @TearDown
-    public void tearDown() throws IOException {
-        FileUtils.deleteDirectory(this.temp.toFile());
     }
 }
