@@ -36,8 +36,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.cactoos.scalar.Unchecked;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -80,12 +80,18 @@ public class RepoUpdateBench {
      */
     private List<Key> debs;
 
+    /**
+     * Count from unique names of Packages index.
+     */
+    private AtomicInteger count;
+
     @Setup
     public void setup() throws IOException {
         if (RepoUpdateBench.BENCH_DIR == null) {
             throw new IllegalStateException("BENCH_DIR environment variable must be set");
         }
         this.storage = new InMemoryStorage();
+        this.count = new AtomicInteger(0);
         try (Stream<Path> files = Files.list(Paths.get(RepoUpdateBench.BENCH_DIR))) {
             this.debs = new ArrayList<>(150);
             files.forEach(
@@ -118,7 +124,7 @@ public class RepoUpdateBench {
         );
         deb.updatePackages(
             this.debs,
-            new Key.From(String.format("Packages-%s.gz", UUID.randomUUID().toString()))
+            new Key.From(String.format("Packages-%s.gz", this.count.incrementAndGet()))
         ).toCompletableFuture().join();
         deb.generateRelease().toCompletableFuture().join();
     }
