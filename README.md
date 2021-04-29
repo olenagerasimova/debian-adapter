@@ -155,4 +155,5 @@ files from the directory will be merged. Sample Packages indexes can be found
 `RepoUpdateBench` works with `Debian.Asto` to first generate Packages.gz index and Release index 
 second. To run this benchmark it's necessary to provide `.deb` files and Packages.gz files in 
 the test directory. The first ones will be used to create Packages.gz index, and the second ones - 
-to create Release index. 
+to create Release index. Sample data for this benchmark can be downloaded 
+[here](https://artipie.s3.amazonaws.com/debian-test/debian-repo.tar.gz). 
