@@ -4,6 +4,7 @@
  */
 package com.artipie.debian;
 
+import com.artipie.asto.ArtipieIOException;
 import com.artipie.debian.metadata.ControlField;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -29,9 +30,9 @@ public interface MultiPackages {
      * Merges provided indexes.
      * @param items Items to merge
      * @param res Output stream with merged data
-     * @throws IOException On IO error
+     * @throws com.artipie.asto.ArtipieIOException On IO error
      */
-    void merge(Collection<InputStream> items, OutputStream res) throws IOException;
+    void merge(Collection<InputStream> items, OutputStream res);
 
     /**
      * Implementation of {@link MultiPackages} that merges Packages indexes checking for duplicates
@@ -42,14 +43,17 @@ public interface MultiPackages {
     final class Unique implements MultiPackages {
 
         @Override
-        public void merge(final Collection<InputStream> items, final OutputStream res)
-            throws IOException {
-            final GZIPOutputStream gop = new GZIPOutputStream(res);
-            final Set<Pair<String, String>> packages = new HashSet<>(items.size());
-            for (final InputStream inp : items) {
-                Unique.appendPackages(gop, inp, packages);
+        public void merge(final Collection<InputStream> items, final OutputStream res) {
+            try {
+                final GZIPOutputStream gop = new GZIPOutputStream(res);
+                final Set<Pair<String, String>> packages = new HashSet<>(items.size());
+                for (final InputStream inp : items) {
+                    Unique.appendPackages(gop, inp, packages);
+                }
+                gop.finish();
+            } catch (final IOException err) {
+                throw new ArtipieIOException(err);
             }
-            gop.finish();
         }
 
         /**
@@ -58,32 +62,35 @@ public interface MultiPackages {
          * @param out OutputStream to write the result
          * @param inp InputStream to read Packages index from
          * @param packages Map with the appended packages
-         * @throws IOException On IO error
          */
         private static void appendPackages(
             final OutputStream out, final InputStream inp, final Set<Pair<String, String>> packages
-        ) throws IOException {
-            final GZIPInputStream gis = new GZIPInputStream(inp);
-            final BufferedReader rdr =
-                new BufferedReader(new InputStreamReader(gis, StandardCharsets.UTF_8));
-            String line;
-            StringBuilder item = new StringBuilder();
-            do {
-                line = rdr.readLine();
-                if ((line == null || line.isEmpty()) && item.length() > 0) {
-                    final Pair<String, String> pair = new ImmutablePair<>(
-                        new ControlField.Package().value(item.toString()).get(0),
-                        new ControlField.Version().value(item.toString()).get(0)
-                    );
-                    if (!packages.contains(pair)) {
-                        out.write(item.append('\n').toString().getBytes(StandardCharsets.UTF_8));
-                        packages.add(pair);
+        ) {
+            try {
+                final GZIPInputStream gis = new GZIPInputStream(inp);
+                final BufferedReader rdr =
+                    new BufferedReader(new InputStreamReader(gis, StandardCharsets.UTF_8));
+                String line;
+                StringBuilder item = new StringBuilder();
+                do {
+                    line = rdr.readLine();
+                    if ((line == null || line.isEmpty()) && item.length() > 0) {
+                        final Pair<String, String> pair = new ImmutablePair<>(
+                            new ControlField.Package().value(item.toString()).get(0),
+                            new ControlField.Version().value(item.toString()).get(0)
+                        );
+                        if (!packages.contains(pair)) {
+                            out.write(item.append('\n').toString().getBytes(StandardCharsets.UTF_8));
+                            packages.add(pair);
+                        }
+                        item = new StringBuilder();
+                    } else if (line != null && !line.isEmpty()) {
+                        item.append(line).append('\n');
                     }
-                    item = new StringBuilder();
-                } else if (line != null && !line.isEmpty()) {
-                    item.append(line).append('\n');
-                }
-            } while (line != null);
+                } while (line != null);
+            } catch (final IOException err) {
+                throw new ArtipieIOException(err);
+            }
         }
     }
 
