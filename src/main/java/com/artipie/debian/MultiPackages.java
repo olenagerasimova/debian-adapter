@@ -23,6 +23,7 @@ import org.apache.commons.lang3.tuple.Pair;
 /**
  * MultiDebian merges metadata.
  * @since 0.6
+ * @checkstyle ClassDataAbstractionCouplingCheck (500 lines)
  */
 public interface MultiPackages {
 
@@ -63,6 +64,7 @@ public interface MultiPackages {
          * @param inp InputStream to read Packages index from
          * @param packages Map with the appended packages
          */
+        @SuppressWarnings("PMD.CyclomaticComplexity")
         private static void appendPackages(
             final OutputStream out, final InputStream inp, final Set<Pair<String, String>> packages
         ) {
@@ -80,7 +82,9 @@ public interface MultiPackages {
                             new ControlField.Version().value(item.toString()).get(0)
                         );
                         if (!packages.contains(pair)) {
-                            out.write(item.append('\n').toString().getBytes(StandardCharsets.UTF_8));
+                            out.write(
+                                item.append('\n').toString().getBytes(StandardCharsets.UTF_8)
+                            );
                             packages.add(pair);
                         }
                         item = new StringBuilder();
