@@ -27,7 +27,7 @@ SOFTWARE.
   <parent>
     <groupId>com.artipie</groupId>
     <artifactId>ppom</artifactId>
-    <version>0.4.2</version>
+    <version>0.5.1</version>
   </parent>
   <artifactId>debian-adapter</artifactId>
   <version>1.0-SNAPSHOT</version>
@@ -63,6 +63,7 @@ SOFTWARE.
     <maven.compiler.target>1.8</maven.compiler.target>
     <org.bouncycastle.version>1.57</org.bouncycastle.version>
     <jmh.version>1.29</jmh.version>
+    <qulice.license>${project.basedir}/LICENSE.header</qulice.license>
   </properties>
   <dependencies>
     <dependency>
@@ -290,7 +291,6 @@ SOFTWARE.
             <exclude>pmd:.*/src/test/resources/.*</exclude>
             <exclude>pmd:.*/src/main/java/com/artipie/debian/benchmarks/.*</exclude>
           </excludes>
-          <license>file:${basedir}/LICENSE.txt</license>
         </configuration>
       </plugin>
       <plugin>
