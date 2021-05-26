@@ -4,6 +4,8 @@
  */
 package com.artipie.debian.misc;
 
+import com.artipie.ArtipieException;
+import com.artipie.asto.ArtipieIOException;
 import com.jcabi.log.Logger;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
@@ -11,7 +13,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.UncheckedIOException;
 import java.security.Security;
 import java.util.Iterator;
 import org.bouncycastle.bcpg.ArmoredOutputStream;
@@ -64,6 +65,8 @@ public final class GpgClearsign {
      * @param key Private key bytes
      * @param pass Password
      * @return File, signed with gpg
+     * @throws ArtipieIOException On IO errors
+     * @throws ArtipieException On problems with GPG
      */
     public byte[] signedContent(final byte[] key, final String pass) {
         try {
@@ -96,10 +99,10 @@ public final class GpgClearsign {
             }
         } catch (final PGPException err) {
             Logger.error(this, "Error while generating gpg-signature:\n%s", err.getMessage());
-            throw new IllegalStateException(err);
+            throw new ArtipieException(err);
         } catch (final IOException err) {
             Logger.error(this, "IO error while generating gpg-signature:\n%s", err.getMessage());
-            throw new UncheckedIOException(err);
+            throw new ArtipieIOException(err);
         }
     }
 
@@ -108,6 +111,8 @@ public final class GpgClearsign {
      * @param key Private key bytes
      * @param pass Password
      * @return File, signed with gpg
+     * @throws ArtipieIOException On IO errors
+     * @throws ArtipieException On problems with GPG
      */
     public byte[] signature(final byte[] key, final String pass) {
         try {
@@ -131,10 +136,10 @@ public final class GpgClearsign {
             }
         } catch (final PGPException err) {
             Logger.error(this, "Error while generating gpg-signature:\n%s", err.getMessage());
-            throw new IllegalStateException(err);
+            throw new ArtipieException(err);
         } catch (final IOException err) {
             Logger.error(this, "IO error while generating gpg-signature:\n%s", err.getMessage());
-            throw new UncheckedIOException(err);
+            throw new ArtipieIOException(err);
         }
     }
 
