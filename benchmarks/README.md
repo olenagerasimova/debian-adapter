@@ -3,8 +3,9 @@
 Here is general algorithm to run benchmarks:
  1. Install snapshot locally of `debian-adapter`: `mvn install`
  2. Build `debian-bench` project: `mvn package -f ./benchmarks`
- 3. Create directory and copy resources required for test into this directory
- 4. Run benchmarks with `env BENCH_DIR=/tmp/debian-test java -cp "target/benchmarks.jar:target/classes/*:target/dependency/*" org.openjdk.jmh.Main BenchToRun`, 
+ 3. Copy dependencies to `target/dependency/` directory: `mvn dependency:copy-dependencies`
+ 4. Create directory and copy resources required for test into this directory
+ 5. Run benchmarks with `env BENCH_DIR=/tmp/debian-test java -cp "target/benchmarks.jar:target/classes/*:target/dependency/*" org.openjdk.jmh.Main BenchToRun`, 
  where `/tmp/debian-test` is a directory with resources for tests, `BenchToRun` is benchmark class name.
 
 There are several benchmarks in debian-adapter: `com.artipie.debian.benchmarks.IndexMergeBench` to 
