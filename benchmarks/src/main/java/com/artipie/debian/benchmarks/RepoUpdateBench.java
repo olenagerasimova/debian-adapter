@@ -7,7 +7,7 @@ package com.artipie.debian.benchmarks;
 import com.amihaiemil.eoyaml.Yaml;
 import com.artipie.asto.Content;
 import com.artipie.asto.Key;
-import com.artipie.asto.Storage;
+import com.artipie.asto.memory.BenchmarkStorage;
 import com.artipie.asto.memory.InMemoryStorage;
 import com.artipie.debian.Config;
 import com.artipie.debian.Debian;
@@ -31,6 +31,9 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.RunnerException;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 /**
  * Benchmark for {@link com.artipie.debian.Debian.Asto}.
@@ -52,9 +55,9 @@ public class RepoUpdateBench {
     private static final String BENCH_DIR = System.getenv("BENCH_DIR");
 
     /**
-     * Storage.
+     * Repository source storage.
      */
-    private Storage storage;
+    private InMemoryStorage readonly;
 
     /**
      * Deb packages list.
@@ -71,14 +74,14 @@ public class RepoUpdateBench {
         if (RepoUpdateBench.BENCH_DIR == null) {
             throw new IllegalStateException("BENCH_DIR environment variable must be set");
         }
-        this.storage = new InMemoryStorage();
+        this.readonly = new InMemoryStorage();
         this.count = new AtomicInteger(0);
         try (Stream<Path> files = Files.list(Paths.get(RepoUpdateBench.BENCH_DIR))) {
             this.debs = new ArrayList<>(150);
             files.forEach(
                 item -> {
                     final Key key = new Key.From(item.getFileName().toString());
-                    this.storage.save(
+                    this.readonly.save(
                         key,
                         new Content.From(
                             new Unchecked<>(() -> Files.readAllBytes(item)).value()
@@ -95,7 +98,7 @@ public class RepoUpdateBench {
     @Benchmark
     public void run(final Blackhole bhl) {
         final Debian deb = new Debian.Asto(
-            this.storage,
+            new BenchmarkStorage(this.readonly),
             new Config.FromYaml(
                 "my-deb",
                 Yaml.createYamlMappingBuilder().add("Architectures", "amd64")
@@ -108,6 +111,20 @@ public class RepoUpdateBench {
             new Key.From(String.format("Packages-%s.gz", this.count.incrementAndGet()))
         ).toCompletableFuture().join();
         deb.generateRelease().toCompletableFuture().join();
+    }
+
+    /**
+     * Main.
+     * @param args CLI args
+     * @throws RunnerException On benchmark failure
+     */
+    public static void main(final String... args) throws RunnerException {
+        new Runner(
+            new OptionsBuilder()
+                .include(RepoUpdateBench.class.getSimpleName())
+                .forks(1)
+                .build()
+        ).run();
     }
 
 }
