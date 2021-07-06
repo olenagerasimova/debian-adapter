@@ -1,5 +1,5 @@
 ---
-name: Maven Build
+name: Maven Bench Build
 "on":
   push:
     branches:
