@@ -6,8 +6,8 @@ package com.artipie.debian;
 
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
-import com.artipie.asto.ext.ContentAs;
 import com.artipie.asto.rx.RxStorageWrapper;
+import com.artipie.asto.streams.ContentAsStream;
 import com.artipie.debian.metadata.Control;
 import com.artipie.debian.metadata.InRelease;
 import com.artipie.debian.metadata.PackagesItem;
@@ -25,6 +25,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 /**
  * Debian repository.
  * @since 0.4
+ * @checkstyle ClassDataAbstractionCouplingCheck (500 lines)
  */
 public interface Debian {
 
@@ -97,9 +98,13 @@ public interface Debian {
             final RxStorageWrapper bsto = new RxStorageWrapper(this.asto);
             return Observable.fromIterable(debs)
                 .flatMapSingle(
-                    key -> bsto.value(key).to(ContentAs.BYTES)
-                        .map(bytes -> new Control.FromBinary(bytes).asString())
-                        .map(string -> new ImmutablePair<>(key, string))
+                    key -> bsto.value(key).flatMap(
+                        val -> Single.fromFuture(
+                            new ContentAsStream<String>(val)
+                                .process(input -> new Control.FromInputStream(input).asString())
+                                .toCompletableFuture()
+                        ).map(string -> new ImmutablePair<>(key, string))
+                    )
                 )
                 .flatMapSingle(
                     pair -> Single.fromFuture(

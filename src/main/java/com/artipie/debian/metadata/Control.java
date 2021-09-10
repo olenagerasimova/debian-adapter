@@ -5,10 +5,10 @@
 package com.artipie.debian.metadata;
 
 import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveInputStream;
@@ -37,7 +37,7 @@ public interface Control {
      * Check <a href="https://www.debian.org/doc/debian-policy/ch-controlfields.html#binary-package-control-files-debian-control">docs</a>.
      * @since 0.1
      */
-    final class FromBinary implements Control {
+    final class FromInputStream implements Control {
 
         /**
          * Control file name.
@@ -45,25 +45,26 @@ public interface Control {
         private static final String FILE_NAME = "control";
 
         /**
-         * Debian binary package bytes.
+         * Debian binary package stream.
          */
-        private final byte[] pkg;
+        private final InputStream pkg;
 
         /**
          * Ctor.
          *
          * @param pkg Debian binary package
          */
-        public FromBinary(final byte[] pkg) {
+        public FromInputStream(final InputStream pkg) {
             this.pkg = pkg;
         }
 
         @Override
         @SuppressWarnings("PMD.AssignmentInOperand")
         public String asString() {
+            Optional<String> res = Optional.empty();
             try (
                 ArchiveInputStream input = new ArchiveStreamFactory().createArchiveInputStream(
-                    new BufferedInputStream(new ByteArrayInputStream(this.pkg))
+                    new BufferedInputStream(this.pkg)
                 )
             ) {
                 ArchiveEntry entry;
@@ -71,14 +72,20 @@ public interface Control {
                     if (!input.canReadEntryData(entry)) {
                         continue;
                     }
-                    if (entry.getName().startsWith(FromBinary.FILE_NAME)) {
-                        return FromBinary.unpackTar(FromBinary.stream(input, entry.getName()));
+                    if (entry.getName().startsWith(FromInputStream.FILE_NAME)) {
+                        res = Optional.of(
+                            FromInputStream.unpackTar(
+                                FromInputStream.stream(input, entry.getName())
+                            )
+                        );
                     }
                 }
             } catch (final ArchiveException | IOException ex) {
                 throw new IllegalStateException("Failed to obtain package metadata", ex);
             }
-            throw new IllegalStateException("Archive `control` is not found in the package");
+            return res.orElseThrow(
+                () -> new IllegalStateException("Archive `control` is not found in the package")
+            );
         }
 
         /**
@@ -111,20 +118,15 @@ public interface Control {
          */
         @SuppressWarnings("PMD.AssignmentInOperand")
         private static String unpackTar(final InputStream input) throws IOException {
-            try (TarArchiveInputStream tar = new TarArchiveInputStream(input)) {
-                TarArchiveEntry entry;
-                while ((entry = (TarArchiveEntry) tar.getNextEntry()) != null) {
-                    if (entry.isFile()
-                        && entry.getName().equals(String.format("./%s", FromBinary.FILE_NAME))) {
-                        return IOUtils.toString(tar, StandardCharsets.UTF_8);
-                    }
+            final TarArchiveInputStream tar = new TarArchiveInputStream(input);
+            TarArchiveEntry entry;
+            while ((entry = (TarArchiveEntry) tar.getNextEntry()) != null) {
+                if (entry.isFile()
+                    && entry.getName().equals(String.format("./%s", FromInputStream.FILE_NAME))) {
+                    return IOUtils.toString(tar, StandardCharsets.UTF_8);
                 }
-            } finally {
-                input.close();
             }
-            throw new IllegalStateException(
-                "File `control` is not found in `control` archive"
-            );
+            throw new IllegalStateException("File `control` is not found in `control` archive");
         }
     }
 }

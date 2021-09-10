@@ -10,15 +10,16 @@ import org.hamcrest.core.IsEqual;
 import org.junit.jupiter.api.Test;
 
 /**
- * Test for {@link Control.FromBinary}.
+ * Test for {@link Control.FromInputStream}.
  * @since 0.1
  */
-class ControlFromBinaryTest {
+class ControlFromInputStreamTest {
 
     @Test
     void readsDataFromTarGz() {
         MatcherAssert.assertThat(
-            new Control.FromBinary(new TestResource("aglfn_1.7-3_all.deb").asBytes()).asString(),
+            new Control.FromInputStream(new TestResource("aglfn_1.7-3_all.deb").asInputStream())
+                .asString(),
             new IsEqual<>(
                 String.join(
                     "\n",
@@ -51,7 +52,8 @@ class ControlFromBinaryTest {
     @Test
     void readsDataFromTarXz() {
         MatcherAssert.assertThat(
-            new Control.FromBinary(new TestResource("pspp_1.2.0-3_amd64.deb").asBytes()).asString(),
+            new Control.FromInputStream(new TestResource("pspp_1.2.0-3_amd64.deb").asInputStream())
+                .asString(),
             new IsEqual<>(
                 String.join(
                     "\n",
