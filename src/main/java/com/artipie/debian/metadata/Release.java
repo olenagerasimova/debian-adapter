@@ -11,10 +11,11 @@ import com.artipie.asto.ext.ContentDigest;
 import com.artipie.asto.ext.Digests;
 import com.artipie.asto.ext.PublisherAs;
 import com.artipie.asto.rx.RxStorageWrapper;
+import com.artipie.asto.streams.ContentAsStream;
 import com.artipie.debian.Config;
 import com.artipie.debian.GpgConfig;
 import com.artipie.debian.misc.GpgClearsign;
-import com.artipie.debian.misc.RosUnpackedContent;
+import com.artipie.debian.misc.SizeAndDigest;
 import hu.akarnokd.rxjava2.interop.SingleInterop;
 import io.reactivex.Observable;
 import java.nio.charset.StandardCharsets;
@@ -209,21 +210,22 @@ public interface Release {
                 content -> new ContentDigest(content, Digests.SHA256).hex()
             ).thenCompose(
                 hex -> this.asto.value(pkg).thenCompose(
-                    content -> new RosUnpackedContent(content).sizeAndDigest().thenApply(
-                        data -> new ImmutablePair<>(
-                            String.format(
-                                " %s %d %s", hex,
-                                content.size().orElseThrow(
-                                    () -> new IllegalStateException("Content size unknown")
+                    content -> new ContentAsStream<Pair<Long, String>>(content)
+                        .process(new SizeAndDigest()).thenApply(
+                            data -> new ImmutablePair<>(
+                                String.format(
+                                    " %s %d %s", hex,
+                                    content.size().orElseThrow(
+                                        () -> new IllegalStateException("Content size unknown")
+                                    ),
+                                    key
                                 ),
-                                key
-                            ),
-                            String.format(
-                                " %s %d %s",
-                                data.getValue(), data.getKey(), key.replace(".gz", "")
+                                String.format(
+                                    " %s %d %s",
+                                    data.getValue(), data.getKey(), key.replace(".gz", "")
+                                )
                             )
                         )
-                    )
                 )
             );
         }

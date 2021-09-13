@@ -7,7 +7,7 @@ package com.artipie.debian.http;
 import com.artipie.asto.Content;
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
-import com.artipie.asto.ext.PublisherAs;
+import com.artipie.asto.streams.ContentAsStream;
 import com.artipie.debian.Config;
 import com.artipie.debian.metadata.Control;
 import com.artipie.debian.metadata.ControlField;
@@ -67,8 +67,10 @@ public final class UpdateSlice implements Slice {
         return new AsyncResponse(
             this.asto.save(key, new Content.From(body))
                 .thenCompose(nothing -> this.asto.value(key))
-                .thenCompose(content -> new PublisherAs(content).bytes())
-                .thenApply(bytes -> new Control.FromBinary(bytes).asString())
+                .thenCompose(
+                    content -> new ContentAsStream<String>(content)
+                        .process(input -> new Control.FromInputStream(input).asString())
+                )
                 .thenCompose(
                     control -> {
                         final List<String> common = new ControlField.Architecture().value(control)

@@ -4,7 +4,6 @@
  */
 package com.artipie.debian.misc;
 
-import com.artipie.asto.Content;
 import com.artipie.asto.test.TestResource;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.hamcrest.MatcherAssert;
@@ -12,17 +11,15 @@ import org.hamcrest.core.IsEqual;
 import org.junit.jupiter.api.Test;
 
 /**
- * Test for {@link RosUnpackedContent}.
+ * Test for {@link SizeAndDigest}.
  * @since 0.6
  */
-class RosUnpackedContentTest {
+class SizeAndDigestTest {
 
     @Test
     void calcsSizeAndDigest() {
         MatcherAssert.assertThat(
-            new RosUnpackedContent(
-                new Content.From(new TestResource("Packages.gz").asBytes())
-            ).sizeAndDigest().toCompletableFuture().join(),
+            new SizeAndDigest().apply(new TestResource("Packages.gz").asInputStream()),
             new IsEqual<>(
                 new ImmutablePair<>(
                     // @checkstyle MagicNumberCheck (1 line)
