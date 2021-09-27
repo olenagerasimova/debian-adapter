@@ -4,25 +4,20 @@
  */
 package com.artipie.debian.metadata;
 
-import com.artipie.asto.Content;
-import com.artipie.asto.Copy;
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
-import com.artipie.asto.fs.FileStorage;
+import com.artipie.asto.streams.StorageValuePipeline;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
-import org.apache.commons.io.FileUtils;
-import org.cactoos.list.ListOf;
 
 /**
  * Package index.
@@ -65,35 +60,18 @@ public interface Package {
 
         @Override
         public CompletionStage<Void> add(final Iterable<String> items, final Key index) {
-            final byte[] bytes = String.join(Asto.SEP, items).getBytes(StandardCharsets.UTF_8);
-            return this.asto.exists(index).thenCompose(
-                exists -> {
-                    final CompletionStage<Void> res;
-                    if (exists) {
-                        try {
-                            final Path temp = Files.createTempDirectory("packages-");
-                            final Path latest = Files.createTempFile(temp, "latest-", ".gz");
-                            res = new Copy(this.asto, new ListOf<>(index))
-                                .copy(new FileStorage(temp))
-                                .thenAccept(
-                                    nothing -> decompressAppendCompress(
-                                        temp.resolve(index.string()), latest, bytes
-                                    )
-                                ).thenCompose(
-                                    nothing -> new FileStorage(temp)
-                                        .move(new Key.From(latest.getFileName().toString()), index)
-                                ).thenCompose(
-                                    nothing -> new Copy(new FileStorage(temp), new ListOf<>(index))
-                                        .copy(this.asto)
-                                ).thenAccept(nothing -> FileUtils.deleteQuietly(temp.toFile()));
-                        } catch (final IOException err) {
-                            throw new IllegalStateException("Failed to create temp dir", err);
+            return CompletableFuture.supplyAsync(
+                () -> String.join(Asto.SEP, items).getBytes(StandardCharsets.UTF_8)
+            ).thenCompose(
+                bytes -> new StorageValuePipeline(this.asto, index).process(
+                    (opt, out) -> {
+                        if (opt.isPresent()) {
+                            Asto.decompressAppendCompress(opt.get(), out, bytes);
+                        } else {
+                            Asto.compress(bytes, out);
                         }
-                    } else {
-                        res = this.asto.save(index, new Content.From(compress(bytes)));
                     }
-                    return res;
-                }
+                )
             );
         }
 
@@ -106,12 +84,12 @@ public interface Package {
          */
         @SuppressWarnings("PMD.AssignmentInOperand")
         private static void decompressAppendCompress(
-            final Path decompress, final Path res, final byte[] append
+            final InputStream decompress, final OutputStream res, final byte[] append
         ) {
             try (
-                OutputStream baos = new BufferedOutputStream(Files.newOutputStream(res));
+                OutputStream baos = new BufferedOutputStream(res);
                 GzipCompressorInputStream gcis = new GzipCompressorInputStream(
-                    new BufferedInputStream(Files.newInputStream(decompress))
+                    new BufferedInputStream(decompress)
                 );
                 GzipCompressorOutputStream gcos =
                     new GzipCompressorOutputStream(new BufferedOutputStream(baos))
@@ -132,18 +110,16 @@ public interface Package {
         /**
          * Compress text for new Package index.
          * @param bytes Bytes to compress
-         * @return Compressed bytes
+         * @param res Output stream to write the result
          */
-        private static byte[] compress(final byte[] bytes) {
-            final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        private static void compress(final byte[] bytes, final OutputStream res) {
             try (GzipCompressorOutputStream gcos =
-                new GzipCompressorOutputStream(new BufferedOutputStream(baos))
+                new GzipCompressorOutputStream(new BufferedOutputStream(res))
                 ) {
                 gcos.write(bytes);
             } catch (final IOException err) {
                 throw new UncheckedIOException(err);
             }
-            return baos.toByteArray();
         }
     }
 
