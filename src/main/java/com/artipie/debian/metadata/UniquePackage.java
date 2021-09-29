@@ -4,20 +4,20 @@
  */
 package com.artipie.debian.metadata;
 
-import com.artipie.asto.Copy;
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
-import com.artipie.asto.fs.FileStorage;
+import com.artipie.asto.streams.StorageValuePipeline;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -27,10 +27,9 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
-import org.apache.commons.io.FileUtils;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.cactoos.list.ListOf;
 
 /**
  * Implementation of {@link Package} that checks uniqueness of the packages index records.
@@ -39,6 +38,11 @@ import org.cactoos.list.ListOf;
  * @checkstyle ExecutableStatementCountCheck (500 lines)
  */
 public final class UniquePackage implements Package {
+
+    /**
+     * Package index items separator.
+     */
+    private static final String SEP = "\n\n";
 
     /**
      * Abstract storage.
@@ -55,37 +59,17 @@ public final class UniquePackage implements Package {
 
     @Override
     public CompletionStage<Void> add(final Iterable<String> items, final Key index) {
-        return this.asto.exists(index).thenCompose(
-            exists -> {
-                final CompletionStage<Void> res;
-                if (exists) {
-                    try {
-                        final Path temp = Files.createTempDirectory("packages-");
-                        final Path latest = Files.createTempFile(temp, "latest-", ".gz");
-                        res = new Copy(this.asto, new ListOf<>(index))
-                            .copy(new FileStorage(temp))
-                            .thenApply(
-                                nothing -> decompressAppendCompress(
-                                    temp.resolve(index.string()), latest, items
-                                )
-                            ).thenCompose(
-                                this::remove
-                            ).thenCompose(
-                                nothing -> new FileStorage(temp)
-                                    .move(new Key.From(latest.getFileName().toString()), index)
-                            ).thenCompose(
-                                nothing -> new Copy(new FileStorage(temp), new ListOf<>(index))
-                                    .copy(this.asto)
-                            ).thenAccept(nothing -> FileUtils.deleteQuietly(temp.toFile()));
-                    } catch (final IOException err) {
-                        throw new IllegalStateException("Failed to create temp dir", err);
-                    }
+        return new StorageValuePipeline<List<String>>(this.asto, index).processWithResult(
+            (opt, out) -> {
+                List<String> duplicates = Collections.emptyList();
+                if (opt.isPresent()) {
+                    duplicates = UniquePackage.decompressAppendCompress(opt.get(), out, items);
                 } else {
-                    res = new Package.Asto(this.asto).add(items, index);
+                    UniquePackage.compress(items, out);
                 }
-                return res;
+                return duplicates;
             }
-        );
+        ).thenCompose(this::remove);
     }
 
     /**
@@ -122,9 +106,9 @@ public final class UniquePackage implements Package {
      */
     @SuppressWarnings({"PMD.AssignmentInOperand", "PMD.CyclomaticComplexity"})
     private static List<String> decompressAppendCompress(
-        final Path decompress, final Path res, final Iterable<String> items
+        final InputStream decompress, final OutputStream res, final Iterable<String> items
     ) {
-        final byte[] bytes = String.join("\n\n", items).getBytes(StandardCharsets.UTF_8);
+        final byte[] bytes = String.join(UniquePackage.SEP, items).getBytes(StandardCharsets.UTF_8);
         final Set<Pair<String, String>> newbies = StreamSupport.stream(items.spliterator(), false)
             .<Pair<String, String>>map(
                 item -> new ImmutablePair<>(
@@ -134,11 +118,10 @@ public final class UniquePackage implements Package {
             ).collect(Collectors.toSet());
         final List<String> duplicates = new ArrayList<>(5);
         try (
-            GZIPInputStream gis = new GZIPInputStream(Files.newInputStream(decompress));
+            GZIPInputStream gis = new GZIPInputStream(decompress);
             BufferedReader rdr =
                 new BufferedReader(new InputStreamReader(gis, StandardCharsets.UTF_8));
-            GZIPOutputStream gop =
-                new GZIPOutputStream(new BufferedOutputStream(Files.newOutputStream(res)))
+            GZIPOutputStream gop = new GZIPOutputStream(new BufferedOutputStream(res))
         ) {
             String line;
             StringBuilder item = new StringBuilder();
@@ -184,5 +167,20 @@ public final class UniquePackage implements Package {
             res = Optional.of(new ControlField.Filename().value(item).get(0));
         }
         return res;
+    }
+
+    /**
+     * Compress text for new Package index.
+     * @param items Items to compress
+     * @param res Output stream to write the result
+     */
+    private static void compress(final Iterable<String> items, final OutputStream res) {
+        try (GzipCompressorOutputStream gcos =
+            new GzipCompressorOutputStream(new BufferedOutputStream(res))
+        ) {
+            gcos.write(String.join(UniquePackage.SEP, items).getBytes(StandardCharsets.UTF_8));
+        } catch (final IOException err) {
+            throw new UncheckedIOException(err);
+        }
     }
 }

@@ -63,7 +63,7 @@ public interface Package {
             return CompletableFuture.supplyAsync(
                 () -> String.join(Asto.SEP, items).getBytes(StandardCharsets.UTF_8)
             ).thenCompose(
-                bytes -> new StorageValuePipeline(this.asto, index).process(
+                bytes -> new StorageValuePipeline<>(this.asto, index).process(
                     (opt, out) -> {
                         if (opt.isPresent()) {
                             Asto.decompressAppendCompress(opt.get(), out, bytes);
