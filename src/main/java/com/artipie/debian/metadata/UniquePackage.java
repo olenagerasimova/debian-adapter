@@ -175,9 +175,7 @@ public final class UniquePackage implements Package {
      * @param res Output stream to write the result
      */
     private static void compress(final Iterable<String> items, final OutputStream res) {
-        try (GzipCompressorOutputStream gcos =
-            new GzipCompressorOutputStream(new BufferedOutputStream(res))
-        ) {
+        try (GzipCompressorOutputStream gcos = new GzipCompressorOutputStream(res)) {
             gcos.write(String.join(UniquePackage.SEP, items).getBytes(StandardCharsets.UTF_8));
         } catch (final IOException err) {
             throw new UncheckedIOException(err);
