@@ -27,6 +27,9 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.RunnerException;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 /**
  * Benchmark for {@link com.artipie.debian.MultiPackages.Unique}.
@@ -70,5 +73,19 @@ public class IndexMergeBench {
             this.input.stream().map(ByteArrayInputStream::new).collect(Collectors.toList()),
             new ByteArrayOutputStream()
         );
+    }
+
+    /**
+     * Main.
+     * @param args CLI args
+     * @throws RunnerException On benchmark failure
+     */
+    public static void main(final String... args) throws RunnerException {
+        new Runner(
+            new OptionsBuilder()
+                .include(IndexMergeBench.class.getSimpleName())
+                .forks(1)
+                .build()
+        ).run();
     }
 }
