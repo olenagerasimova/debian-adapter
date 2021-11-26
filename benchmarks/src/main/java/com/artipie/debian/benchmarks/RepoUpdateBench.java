@@ -9,6 +9,7 @@ import com.artipie.asto.Content;
 import com.artipie.asto.Key;
 import com.artipie.asto.memory.BenchmarkStorage;
 import com.artipie.asto.memory.InMemoryStorage;
+import com.artipie.asto.misc.UncheckedIOScalar;
 import com.artipie.debian.Config;
 import com.artipie.debian.Debian;
 import java.io.IOException;
@@ -20,7 +21,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-import org.cactoos.scalar.Unchecked;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Measurement;
@@ -84,7 +84,7 @@ public class RepoUpdateBench {
                     this.readonly.save(
                         key,
                         new Content.From(
-                            new Unchecked<>(() -> Files.readAllBytes(item)).value()
+                            new UncheckedIOScalar<>(() -> Files.readAllBytes(item)).value()
                         )
                     ).join();
                     if (key.string().endsWith(".deb")) {
