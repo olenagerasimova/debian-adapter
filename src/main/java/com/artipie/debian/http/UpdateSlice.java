@@ -24,13 +24,13 @@ import com.artipie.http.rs.RsWithStatus;
 import com.artipie.http.rs.StandardRs;
 import com.artipie.http.slice.KeyFromPath;
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import org.cactoos.list.ListOf;
 import org.reactivestreams.Publisher;
 
 /**
@@ -121,7 +121,7 @@ public final class UpdateSlice implements Slice {
                     )
                 ).map(
                     index -> new UniquePackage(this.asto)
-                        .add(new ListOf<>(item), new Key.From(index))
+                        .add(Collections.singleton(item), new Key.From(index))
                         .thenCompose(nothing -> release.update(new Key.From(index)))
                 ).toArray(CompletableFuture[]::new)
             ).thenCompose(
