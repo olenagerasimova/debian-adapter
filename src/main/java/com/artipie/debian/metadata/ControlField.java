@@ -4,7 +4,7 @@
  */
 package com.artipie.debian.metadata;
 
-import com.google.common.collect.Lists;
+import java.util.Arrays;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.stream.Stream;
@@ -49,7 +49,7 @@ public interface ControlField {
                 //@checkstyle StringLiteralsConcatenationCheck (1 line)
                 .map(item -> item.substring(item.indexOf(":") + 2))
                 .map(res -> res.split(" "))
-                .map(Lists::newArrayList)
+                .map(Arrays::asList)
                 .orElseThrow(
                     () -> new NoSuchElementException(
                         String.format("Field %s not found in control", this.field)

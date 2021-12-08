@@ -109,7 +109,7 @@ SOFTWARE.
     <dependency>
       <groupId>com.artipie</groupId>
       <artifactId>asto</artifactId>
-      <version>v1.9.0</version>
+      <version>v1.10.0</version>
     </dependency>
     <dependency>
       <groupId>com.artipie</groupId>
@@ -119,7 +119,7 @@ SOFTWARE.
     <dependency>
       <groupId>com.artipie</groupId>
       <artifactId>http-client</artifactId>
-      <version>0.3.2</version>
+      <version>0.3.6</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
@@ -182,6 +182,7 @@ SOFTWARE.
       <version>1.8</version>
       <scope>runtime</scope>
     </dependency>
+    <!-- API of this library is quite unstable. Please, use this one only in the test scope. -->
     <dependency>
       <groupId>org.cactoos</groupId>
       <artifactId>cactoos</artifactId>

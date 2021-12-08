@@ -121,7 +121,7 @@ public final class UpdateSlice implements Slice {
                     )
                 ).map(
                     index -> new UniquePackage(this.asto)
-                        .add(Collections.singleton(item), new Key.From(index))
+                        .add(Collections.singletonList(item), new Key.From(index))
                         .thenCompose(nothing -> release.update(new Key.From(index)))
                 ).toArray(CompletableFuture[]::new)
             ).thenCompose(

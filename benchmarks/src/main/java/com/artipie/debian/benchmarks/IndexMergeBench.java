@@ -5,7 +5,7 @@
 
 package com.artipie.debian.benchmarks;
 
-import com.artipie.asto.misc.UncheckedIOFunc;
+import com.artipie.asto.misc.UncheckedIOScalar;
 import com.artipie.debian.MultiPackages;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -61,8 +61,9 @@ public class IndexMergeBench {
             throw new IllegalStateException("BENCH_DIR environment variable must be set");
         }
         try (Stream<Path> files = Files.list(Paths.get(IndexMergeBench.BENCH_DIR))) {
-            this.input = files.map(new UncheckedIOFunc<>(Files::readAllBytes))
-                .collect(Collectors.toList());
+            this.input = files.map(
+                path -> new UncheckedIOScalar<>(() -> Files.readAllBytes(path)).value()
+            ).collect(Collectors.toList());
         }
     }
 
