@@ -1,11 +1,13 @@
-<img src="https://www.artipie.com/logo.svg" width="64px" height="64px"/>
+<a href="http://artipie.com"><img src="https://www.artipie.com/logo.svg" width="64px" height="64px"/></a>
+
+[![Join our Telegram group](https://img.shields.io/badge/Join%20us-Telegram-blue?&logo=telegram&?link=http://right&link=http://t.me/artipie)](http://t.me/artipie)
 
 [![EO principles respected here](https://www.elegantobjects.org/badge.svg)](https://www.elegantobjects.org)
 [![DevOps By Rultor.com](http://www.rultor.com/b/artipie/debian-adapter)](http://www.rultor.com/p/artipie/debian-adapter)
 [![We recommend IntelliJ IDEA](https://www.elegantobjects.org/intellij-idea.svg)](https://www.jetbrains.com/idea/)
 
 [![Javadoc](http://www.javadoc.io/badge/com.artipie/debian-adapter.svg)](http://www.javadoc.io/doc/com.artipie/debian-adapter)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/com.artipie/debian-adapter/blob/master/LICENSE.txt)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/artipie/debian-adapter/blob/master/LICENSE.txt)
 [![codecov](https://codecov.io/gh/artipie/debian-adapter/branch/master/graph/badge.svg)](https://codecov.io/gh/artipie/debian-adapter)
 [![Hits-of-Code](https://hitsofcode.com/github/artipie/debian-adapter)](https://hitsofcode.com/view/github/artipie/debian-adapter)
 [![Maven Central](https://img.shields.io/maven-central/v/com.artipie/debian-adapter.svg)](https://maven-badges.herokuapp.com/maven-central/com.artipie/debian-adapter)
@@ -17,6 +19,40 @@ You may add it to your binary storage and it will become
 a fully-functionable Debian repository, which
 [`apt`](https://en.wikipedia.org/wiki/APT_(software)) 
 will perfectly understand.
+
+If you have any question or suggestions, do not hesitate to [create an issue](https://github.com/artipie/debian-adapter/issues/new) 
+or contact us in [Telegram](https://t.me/artipie).
+Artipie [roadmap](https://github.com/orgs/artipie/projects/3).
+
+## How to use
+
+This is the dependency you need:
+```xml
+<dependency>
+    <groupId>com.artipie</groupId>
+    <artifactId>debian-adapter</artifactId>
+    <version>[...]</version>
+</dependency>
+```
+
+Debian adapter SDK provides functionality to update repository metadata in [abstract storage](https://github.com/artipie/asto).
+Here is the example:
+```java
+// abstract storage instance
+final Storage asto = new FileStorage(Paths.of("usr/local/artipie/debian-repo"));
+// repository config, some com.artipie.debian.Config implementation
+final Config config = new MyConfig();
+// debian repository
+final Debian repo = new Debian.Asto(asto, config);
+```
+`Debian.Asto` implementation of `Debian` interface can update repository:
+- call `Debian#updatePackages` method to add debian packages into Packages index providing list
+of the `.deb` files to add and Packages index to update
+- call `Debian#generateRelease` to create/update `Release` index file and corresponding `Release.gpg`
+- call `Debian#generateInRelease` to create/update `InRelease` index file and sign it with a GPG clearsign signature
+
+More technical details can be found in [JavaDocs](http://www.javadoc.io/doc/com.artipie/debian-adapter), 
+more information about storages is available [here](https://github.com/artipie/asto#usage).
 
 ## Debian repository structure
 
@@ -129,4 +165,4 @@ sending us your pull request please run full Maven build:
 $ mvn clean install -Pqulice
 ```
 
-To avoid build errors use Maven 3.2+.
+To avoid build errors use Maven 3.2+ and please read [contributing rules](https://github.com/artipie/artipie/blob/master/CONTRIBUTING.md).
