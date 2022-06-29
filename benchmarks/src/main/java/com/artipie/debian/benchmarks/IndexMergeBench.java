@@ -5,6 +5,7 @@
 
 package com.artipie.debian.benchmarks;
 
+import com.artipie.asto.misc.UncheckedIOScalar;
 import com.artipie.debian.MultiPackages;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -16,7 +17,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.cactoos.scalar.Unchecked;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Measurement;
@@ -62,7 +62,7 @@ public class IndexMergeBench {
         }
         try (Stream<Path> files = Files.list(Paths.get(IndexMergeBench.BENCH_DIR))) {
             this.input = files.map(
-                path -> new Unchecked<>(() -> Files.readAllBytes(path)).value()
+                path -> new UncheckedIOScalar<>(() -> Files.readAllBytes(path)).value()
             ).collect(Collectors.toList());
         }
     }

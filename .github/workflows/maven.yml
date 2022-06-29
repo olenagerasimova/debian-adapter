@@ -28,3 +28,5 @@ jobs:
             ${{ runner.os }}-jdk-${{ matrix.java }}-maven-
       - name: Build it with Maven
         run: mvn -B verify -Pqulice
+      - name: Build benchmarks with Maven
+        run: mvn -B install -f ./benchmarks
