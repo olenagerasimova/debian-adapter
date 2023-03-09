@@ -27,7 +27,7 @@ SOFTWARE.
   <parent>
     <groupId>com.artipie</groupId>
     <artifactId>ppom</artifactId>
-    <version>1.1.0</version>
+    <version>v1.2.0</version>
   </parent>
   <artifactId>debian-adapter</artifactId>
   <version>1.0-SNAPSHOT</version>
@@ -67,11 +67,6 @@ SOFTWARE.
   </properties>
   <dependencies>
     <dependency>
-      <groupId>org.cqfn</groupId>
-      <artifactId>rio</artifactId>
-      <version>0.3</version>
-    </dependency>
-    <dependency>
       <groupId>com.jcabi</groupId>
       <artifactId>jcabi-log</artifactId>
     </dependency>
@@ -104,12 +99,12 @@ SOFTWARE.
     <dependency>
       <groupId>com.artipie</groupId>
       <artifactId>http</artifactId>
-      <version>v1.1.4</version>
+      <version>v1.2.3</version>
     </dependency>
     <dependency>
       <groupId>com.artipie</groupId>
       <artifactId>asto-core</artifactId>
-      <version>v1.13.0</version>
+      <version>v1.15.4</version>
     </dependency>
     <dependency>
       <groupId>com.artipie</groupId>
