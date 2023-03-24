@@ -1,5 +1,5 @@
 /*
- * The MIT License (MIT) Copyright (c) 2020-2022 artipie.com
+ * The MIT License (MIT) Copyright (c) 2020-2023 artipie.com
  * https://github.com/artipie/debian-adapter/LICENSE.txt
  */
 package com.artipie.debian;
@@ -10,9 +10,13 @@ import com.artipie.asto.memory.InMemoryStorage;
 import com.artipie.asto.test.TestResource;
 import com.artipie.debian.http.DebianSlice;
 import com.artipie.http.auth.Authentication;
-import com.artipie.http.auth.Permissions;
 import com.artipie.http.rs.RsStatus;
 import com.artipie.http.slice.LoggingSlice;
+import com.artipie.security.perms.Action;
+import com.artipie.security.perms.AdapterBasicPermission;
+import com.artipie.security.perms.EmptyPermissions;
+import com.artipie.security.policy.Policy;
+import com.artipie.security.policy.PolicyByUsername;
 import com.artipie.vertx.VertxSliceServer;
 import io.vertx.reactivex.core.Vertx;
 import java.io.DataOutputStream;
@@ -22,6 +26,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.PermissionCollection;
 import org.apache.commons.codec.binary.Base64;
 import org.cactoos.list.ListOf;
 import org.hamcrest.MatcherAssert;
@@ -93,7 +98,7 @@ public final class DebianAuthSliceITCase {
 
     @Test
     void pushAndInstallWorks() throws Exception {
-        this.init((user, action) -> true);
+        this.init(Policy.FREE);
         final HttpURLConnection con = this.getConnection(DebianAuthSliceITCase.AUTH, "PUT");
         final DataOutputStream out = new DataOutputStream(con.getOutputStream());
         out.write(new TestResource("aglfn_1.7-3_amd64.deb").asBytes());
@@ -116,7 +121,7 @@ public final class DebianAuthSliceITCase {
     @ParameterizedTest
     @ValueSource(strings = {"GET", "PUT"})
     void returnsUnauthorizedWhenUserIsUnknown(final String method) throws Exception {
-        this.init((user, action) -> user.name().equals(DebianAuthSliceITCase.USER));
+        this.init(new PolicyByUsername(DebianAuthSliceITCase.USER));
         MatcherAssert.assertThat(
             "Response is UNAUTHORIZED",
             this.getConnection("mark:abc", method).getResponseCode(),
@@ -128,8 +133,18 @@ public final class DebianAuthSliceITCase {
     @ValueSource(strings = {"GET", "PUT"})
     void returnsForbiddenWhenOperationIsNotAllowed(final String method) throws Exception {
         this.init(
-            (user, action) -> user.name().equals(DebianAuthSliceITCase.USER)
-                && action.equals("fake")
+            user -> {
+                final PermissionCollection res;
+                if (DebianAuthSliceITCase.USER.equals(user.name())) {
+                    final AdapterBasicPermission perm =
+                        new AdapterBasicPermission("artipie", Action.NONE);
+                    res = perm.newPermissionCollection();
+                    res.add(perm);
+                } else {
+                    res = EmptyPermissions.INSTANCE;
+                }
+                return res;
+            }
         );
         MatcherAssert.assertThat(
             "Response is FORBIDDEN",
@@ -163,7 +178,7 @@ public final class DebianAuthSliceITCase {
         return con;
     }
 
-    private void init(final Permissions permissions) throws IOException, InterruptedException {
+    private void init(final Policy<?> permissions) throws IOException, InterruptedException {
         final Storage storage = new InMemoryStorage();
         this.server = new VertxSliceServer(
             DebianAuthSliceITCase.VERTX,
