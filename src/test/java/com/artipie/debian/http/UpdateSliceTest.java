@@ -19,6 +19,8 @@ import com.artipie.http.hm.SliceHasResponse;
 import com.artipie.http.rq.RequestLine;
 import com.artipie.http.rq.RqMethod;
 import com.artipie.http.rs.RsStatus;
+import com.artipie.scheduling.ArtifactEvent;
+import com.artipie.scheduling.EventQueue;
 import java.io.IOException;
 import org.cactoos.list.ListOf;
 import org.hamcrest.MatcherAssert;
@@ -49,9 +51,15 @@ class UpdateSliceTest {
      */
     private Storage asto;
 
+    /**
+     * Artifact events queue.
+     */
+    private EventQueue<ArtifactEvent> events;
+
     @BeforeEach
     void init() {
         this.asto = new InMemoryStorage();
+        this.events = new EventQueue<>();
     }
 
     @Test
@@ -64,7 +72,8 @@ class UpdateSliceTest {
             "Response is OK",
             new UpdateSlice(
                 this.asto,
-                new Config.FromYaml("my_repo", UpdateSliceTest.SETTINGS, new InMemoryStorage())
+                new Config.FromYaml("my_repo", UpdateSliceTest.SETTINGS, new InMemoryStorage()),
+                this.events
             ),
             new SliceHasResponse(
                 new RsHasStatus(RsStatus.OK),
@@ -93,6 +102,7 @@ class UpdateSliceTest {
             this.asto.value(inrelease).join().size().get(),
             new IsNot<>(new IsEqual<>(0L))
         );
+        MatcherAssert.assertThat("Artifact event added to queue", this.events.size() == 1);
     }
 
     @Test
@@ -111,7 +121,7 @@ class UpdateSliceTest {
                     "deb_repo",
                     UpdateSliceTest.SETTINGS,
                     new InMemoryStorage()
-                )
+                ), this.events
             ),
             new SliceHasResponse(
                 new RsHasStatus(RsStatus.OK),
@@ -145,6 +155,7 @@ class UpdateSliceTest {
             this.asto.value(inrelease).join().size().get(),
             new IsNot<>(new IsEqual<>(0L))
         );
+        MatcherAssert.assertThat("Artifact event added to queue", this.events.size() == 1);
     }
 
     @Test
@@ -157,7 +168,8 @@ class UpdateSliceTest {
                     "my_repo",
                     UpdateSliceTest.SETTINGS,
                     new InMemoryStorage()
-                )
+                ),
+                this.events
             ),
             new SliceHasResponse(
                 new RsHasStatus(RsStatus.BAD_REQUEST),
@@ -171,6 +183,7 @@ class UpdateSliceTest {
             this.asto.exists(new Key.From("main/aglfn_1.7-3_all.deb")).join(),
             new IsEqual<>(false)
         );
+        MatcherAssert.assertThat("Artifact event was not added to queue", this.events.size() == 0);
     }
 
     @Test
@@ -183,7 +196,8 @@ class UpdateSliceTest {
                     "my_repo",
                     UpdateSliceTest.SETTINGS,
                     new InMemoryStorage()
-                )
+                ),
+                this.events
             ),
             new SliceHasResponse(
                 new RsHasStatus(RsStatus.INTERNAL_ERROR),
@@ -197,6 +211,7 @@ class UpdateSliceTest {
             this.asto.exists(new Key.From("main/corrupted.deb")).join(),
             new IsEqual<>(false)
         );
+        MatcherAssert.assertThat("Artifact event was not added to queue", this.events.size() == 0);
     }
 
 }

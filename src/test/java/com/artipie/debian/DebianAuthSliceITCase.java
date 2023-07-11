@@ -12,6 +12,7 @@ import com.artipie.debian.http.DebianSlice;
 import com.artipie.http.auth.Authentication;
 import com.artipie.http.rs.RsStatus;
 import com.artipie.http.slice.LoggingSlice;
+import com.artipie.scheduling.EventQueue;
 import com.artipie.security.perms.Action;
 import com.artipie.security.perms.AdapterBasicPermission;
 import com.artipie.security.perms.EmptyPermissions;
@@ -47,6 +48,7 @@ import org.testcontainers.containers.GenericContainer;
  * Test for {@link DebianSlice}.
  * @since 0.1
  * @checkstyle ClassDataAbstractionCouplingCheck (500 lines)
+ * @checkstyle ClassFanOutComplexityCheck (500 lines)
  */
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 @EnabledOnOs({OS.LINUX, OS.MAC})
@@ -196,7 +198,8 @@ public final class DebianAuthSliceITCase {
                             .add("Architectures", "amd64")
                             .build(),
                         storage
-                    )
+                    ),
+                    new EventQueue<>()
                 )
             )
         );

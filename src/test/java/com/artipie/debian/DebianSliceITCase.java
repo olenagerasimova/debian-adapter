@@ -12,6 +12,8 @@ import com.artipie.asto.test.TestResource;
 import com.artipie.debian.http.DebianSlice;
 import com.artipie.http.rs.RsStatus;
 import com.artipie.http.slice.LoggingSlice;
+import com.artipie.scheduling.ArtifactEvent;
+import com.artipie.scheduling.EventQueue;
 import com.artipie.vertx.VertxSliceServer;
 import com.jcabi.log.Logger;
 import io.vertx.reactivex.core.Vertx;
@@ -84,9 +86,15 @@ public final class DebianSliceITCase {
      */
     private GenericContainer<?> cntn;
 
+    /**
+     * Artifact events queue.
+     */
+    private EventQueue<ArtifactEvent> events;
+
     @BeforeEach
     void init() throws IOException, InterruptedException {
         this.storage = new InMemoryStorage();
+        this.events = new EventQueue<>();
         this.server = new VertxSliceServer(
             DebianSliceITCase.VERTX,
             new LoggingSlice(
@@ -99,7 +107,8 @@ public final class DebianSliceITCase {
                             .add("Architectures", "amd64")
                             .build(),
                         new InMemoryStorage()
-                    )
+                    ),
+                    this.events
                 )
             )
         );
@@ -189,6 +198,7 @@ public final class DebianSliceITCase {
             this.exec("apt-get", "install", "-y", "aglfn"),
             new StringContainsInOrder(new ListOf<>("Unpacking aglfn", "Setting up aglfn"))
         );
+        MatcherAssert.assertThat("Pushed artifact added to events queue", this.events.size() == 1);
     }
 
     @AfterEach

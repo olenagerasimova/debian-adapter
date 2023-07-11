@@ -18,6 +18,8 @@ import com.artipie.http.rt.RtRulePath;
 import com.artipie.http.rt.SliceRoute;
 import com.artipie.http.slice.SliceDownload;
 import com.artipie.http.slice.SliceSimple;
+import com.artipie.scheduling.ArtifactEvent;
+import com.artipie.scheduling.EventQueue;
 import com.artipie.security.perms.Action;
 import com.artipie.security.perms.AdapterBasicPermission;
 import com.artipie.security.policy.Policy;
@@ -35,7 +37,19 @@ public final class DebianSlice extends Slice.Wrap {
      * @param config Repository configuration
      */
     public DebianSlice(final Storage storage, final Config config) {
-        this(storage, Policy.FREE, Authentication.ANONYMOUS, config);
+        this(storage, Policy.FREE, Authentication.ANONYMOUS, config, new EventQueue<>());
+    }
+
+    /**
+     * Ctor.
+     * @param storage Storage
+     * @param config Repository configuration
+     * @param events Artifact events queue
+     */
+    public DebianSlice(
+        final Storage storage, final Config config, final EventQueue<ArtifactEvent> events
+    ) {
+        this(storage, Policy.FREE, Authentication.ANONYMOUS, config, events);
     }
 
     /**
@@ -44,10 +58,13 @@ public final class DebianSlice extends Slice.Wrap {
      * @param policy Policy
      * @param users Users
      * @param config Repository configuration
+     * @param events Artifact events queue
      * @checkstyle ParameterNumberCheck (5 lines)
      */
-    public DebianSlice(final Storage storage, final Policy<?> policy,
-        final Authentication users, final Config config) {
+    public DebianSlice(
+        final Storage storage, final Policy<?> policy,
+        final Authentication users, final Config config, final EventQueue<ArtifactEvent> events
+    ) {
         super(
             new SliceRoute(
                 new RtRulePath(
@@ -66,7 +83,7 @@ public final class DebianSlice extends Slice.Wrap {
                         new ByMethodsRule(RqMethod.PUT), new ByMethodsRule(RqMethod.POST)
                     ),
                     new BasicAuthzSlice(
-                        new ReleaseSlice(new UpdateSlice(storage, config), storage, config),
+                        new ReleaseSlice(new UpdateSlice(storage, config, events), storage, config),
                         users,
                         new OperationControl(
                             policy,

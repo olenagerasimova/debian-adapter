@@ -6,6 +6,7 @@ package com.artipie.debian.http;
 
 import com.artipie.asto.Content;
 import com.artipie.asto.Key;
+import com.artipie.asto.Meta;
 import com.artipie.asto.Storage;
 import com.artipie.asto.streams.ContentAsStream;
 import com.artipie.debian.Config;
@@ -15,14 +16,18 @@ import com.artipie.debian.metadata.InRelease;
 import com.artipie.debian.metadata.PackagesItem;
 import com.artipie.debian.metadata.Release;
 import com.artipie.debian.metadata.UniquePackage;
+import com.artipie.http.Headers;
 import com.artipie.http.Response;
 import com.artipie.http.Slice;
 import com.artipie.http.async.AsyncResponse;
+import com.artipie.http.headers.Login;
 import com.artipie.http.rq.RequestLineFrom;
 import com.artipie.http.rs.RsStatus;
 import com.artipie.http.rs.RsWithStatus;
 import com.artipie.http.rs.StandardRs;
 import com.artipie.http.slice.KeyFromPath;
+import com.artipie.scheduling.ArtifactEvent;
+import com.artipie.scheduling.EventQueue;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
@@ -41,6 +46,11 @@ import org.reactivestreams.Publisher;
 public final class UpdateSlice implements Slice {
 
     /**
+     * Repository type name.
+     */
+    private static final String REPO_TYPE = "debian";
+
+    /**
      * Abstract storage.
      */
     private final Storage asto;
@@ -51,13 +61,22 @@ public final class UpdateSlice implements Slice {
     private final Config config;
 
     /**
+     * Artifact events.
+     */
+    private final EventQueue<ArtifactEvent> events;
+
+    /**
      * Ctor.
      * @param asto Abstract storage
      * @param config Repository configuration
+     * @param events Artifact events
      */
-    public UpdateSlice(final Storage asto, final Config config) {
+    public UpdateSlice(
+        final Storage asto, final Config config, final EventQueue<ArtifactEvent> events
+    ) {
         this.asto = asto;
         this.config = config;
+        this.events = events;
     }
 
     @Override
@@ -82,8 +101,11 @@ public final class UpdateSlice implements Slice {
                                 nothing -> new RsWithStatus(RsStatus.BAD_REQUEST)
                             );
                         } else {
-                            res = this.generateIndexes(key, control, common)
-                                .thenApply(nothing -> StandardRs.OK);
+                            res = this.generateIndexes(key, control, common).thenCompose(
+                                nothing -> this.logEvents(
+                                    key, control, common, new Headers.From(headers)
+                                )
+                            ).thenApply(nothing -> StandardRs.OK);
                         }
                         return res;
                     }
@@ -127,6 +149,41 @@ public final class UpdateSlice implements Slice {
             ).thenCompose(
                 nothing -> new InRelease.Asto(this.asto, this.config).generate(release.key())
             )
+        );
+    }
+
+    /**
+     * Adds new package data into events queue. As one package can be suitable for several
+     * architectures, we add architecture to package name and log package for each architecture.
+     * For example:
+     * aglfn_all
+     * aglfn_amb46
+     * aglfn_arm
+     * @param artifact Artifact key
+     * @param control Control metadata
+     * @param archs Supported architectures
+     * @param hdrs Request headers
+     * @return Completion action
+     * @checkstyle ParameterNumberCheck (5 lines)
+     */
+    private CompletionStage<Void> logEvents(
+        final Key artifact, final String control, final List<String> archs, final Headers hdrs
+    ) {
+        return this.asto.metadata(artifact).thenApply(meta -> meta.read(Meta.OP_SIZE).get())
+            .thenAccept(
+                size -> {
+                    final String name = new ControlField.Package().value(control).get(0);
+                    final String version = new ControlField.Version().value(control).get(0);
+                    final String owner = new Login(hdrs).getValue();
+                    archs.forEach(
+                        val -> this.events.put(
+                            new ArtifactEvent(
+                                UpdateSlice.REPO_TYPE, this.config.codename(), owner,
+                                String.join("_", name, val), version, size
+                            )
+                        )
+                    );
+                }
         );
     }
 }
