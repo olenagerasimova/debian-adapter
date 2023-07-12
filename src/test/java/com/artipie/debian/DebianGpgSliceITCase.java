@@ -115,7 +115,7 @@ public final class DebianGpgSliceITCase {
                 "deb http://host.testcontainers.internal:%d/ artipie main", this.port
             ).getBytes()
         );
-        this.cntn = new GenericContainer<>("debian")
+        this.cntn = new GenericContainer<>("debian:11")
             .withCommand("tail", "-f", "/dev/null")
             .withWorkingDirectory("/home/")
             .withFileSystemBind(this.tmp.toString(), "/home");
