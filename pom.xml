@@ -150,6 +150,11 @@ SOFTWARE.
       <version>1.8</version>
       <scope>runtime</scope>
     </dependency>
+    <dependency>
+      <groupId>com.github.luben</groupId>
+      <artifactId>zstd-jni</artifactId>
+      <version>1.5.5-4</version>
+    </dependency>
     <!-- API of this library is quite unstable. Please, use this one only in the test scope. -->
     <dependency>
       <groupId>org.cactoos</groupId>

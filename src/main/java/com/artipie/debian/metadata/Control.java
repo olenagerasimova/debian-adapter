@@ -17,6 +17,7 @@ import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
+import org.apache.commons.compress.compressors.zstandard.ZstdCompressorInputStream;
 import org.apache.commons.io.IOUtils;
 
 /**
@@ -103,6 +104,8 @@ public interface Control {
                 res = new GzipCompressorInputStream(input);
             } else if (name.endsWith("xz")) {
                 res = new XZCompressorInputStream(input);
+            } else if (name.endsWith("zst")) {
+                res = new ZstdCompressorInputStream(input);
             } else {
                 throw new IllegalStateException("Unsupported archive type");
             }
