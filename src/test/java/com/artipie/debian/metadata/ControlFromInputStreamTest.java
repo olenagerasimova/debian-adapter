@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
  * Test for {@link Control.FromInputStream}.
  * @since 0.1
  */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class ControlFromInputStreamTest {
 
     @Test
@@ -77,6 +78,24 @@ class ControlFromInputStreamTest {
                     " .",
                     " PSPP has both text-based and graphical user interfaces. The PSPP user interface",
                     " has been translated into a number of languages.\n"
+                )
+            )
+        );
+    }
+
+    @Test
+    void readsDataFromZst() {
+        MatcherAssert.assertThat(
+            new Control.FromInputStream(new TestResource("test_3.0_1_amd64.deb").asInputStream())
+                .asString(),
+            new IsEqual<>(
+                String.join(
+                    "\n",
+                    "Package: consulo",
+                    "Version: 3.0",
+                    "Architecture: amd64",
+                    "Maintainer: consulo.io <admin@consulo.io>",
+                    "Description: Multilanguage IDE\n"
                 )
             )
         );
