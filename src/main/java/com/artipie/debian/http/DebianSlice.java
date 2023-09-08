@@ -19,10 +19,11 @@ import com.artipie.http.rt.SliceRoute;
 import com.artipie.http.slice.SliceDownload;
 import com.artipie.http.slice.SliceSimple;
 import com.artipie.scheduling.ArtifactEvent;
-import com.artipie.scheduling.EventQueue;
 import com.artipie.security.perms.Action;
 import com.artipie.security.perms.AdapterBasicPermission;
 import com.artipie.security.policy.Policy;
+import java.util.Optional;
+import java.util.Queue;
 
 /**
  * Debian slice.
@@ -37,7 +38,7 @@ public final class DebianSlice extends Slice.Wrap {
      * @param config Repository configuration
      */
     public DebianSlice(final Storage storage, final Config config) {
-        this(storage, Policy.FREE, Authentication.ANONYMOUS, config, new EventQueue<>());
+        this(storage, Policy.FREE, Authentication.ANONYMOUS, config, Optional.empty());
     }
 
     /**
@@ -47,7 +48,7 @@ public final class DebianSlice extends Slice.Wrap {
      * @param events Artifact events queue
      */
     public DebianSlice(
-        final Storage storage, final Config config, final EventQueue<ArtifactEvent> events
+        final Storage storage, final Config config, final Optional<Queue<ArtifactEvent>> events
     ) {
         this(storage, Policy.FREE, Authentication.ANONYMOUS, config, events);
     }
@@ -63,7 +64,8 @@ public final class DebianSlice extends Slice.Wrap {
      */
     public DebianSlice(
         final Storage storage, final Policy<?> policy,
-        final Authentication users, final Config config, final EventQueue<ArtifactEvent> events
+        final Authentication users, final Config config,
+        final Optional<Queue<ArtifactEvent>> events
     ) {
         super(
             new SliceRoute(

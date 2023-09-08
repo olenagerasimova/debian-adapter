@@ -27,11 +27,12 @@ import com.artipie.http.rs.RsWithStatus;
 import com.artipie.http.rs.StandardRs;
 import com.artipie.http.slice.KeyFromPath;
 import com.artipie.scheduling.ArtifactEvent;
-import com.artipie.scheduling.EventQueue;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
@@ -63,7 +64,7 @@ public final class UpdateSlice implements Slice {
     /**
      * Artifact events.
      */
-    private final EventQueue<ArtifactEvent> events;
+    private final Optional<Queue<ArtifactEvent>> events;
 
     /**
      * Ctor.
@@ -72,7 +73,7 @@ public final class UpdateSlice implements Slice {
      * @param events Artifact events
      */
     public UpdateSlice(
-        final Storage asto, final Config config, final EventQueue<ArtifactEvent> events
+        final Storage asto, final Config config, final Optional<Queue<ArtifactEvent>> events
     ) {
         this.asto = asto;
         this.config = config;
@@ -101,11 +102,15 @@ public final class UpdateSlice implements Slice {
                                 nothing -> new RsWithStatus(RsStatus.BAD_REQUEST)
                             );
                         } else {
-                            res = this.generateIndexes(key, control, common).thenCompose(
-                                nothing -> this.logEvents(
-                                    key, control, common, new Headers.From(headers)
-                                )
-                            ).thenApply(nothing -> StandardRs.OK);
+                            CompletionStage<Void> upd = this.generateIndexes(key, control, common);
+                            if (this.events.isPresent()) {
+                                upd = upd.thenCompose(
+                                    nothing -> this.logEvents(
+                                        key, control, common, new Headers.From(headers)
+                                    )
+                                );
+                            }
+                            res = upd.thenApply(nothing -> StandardRs.OK);
                         }
                         return res;
                     }
@@ -176,7 +181,7 @@ public final class UpdateSlice implements Slice {
                     final String version = new ControlField.Version().value(control).get(0);
                     final String owner = new Login(hdrs).getValue();
                     archs.forEach(
-                        val -> this.events.put(
+                        val -> this.events.get().add(
                             new ArtifactEvent(
                                 UpdateSlice.REPO_TYPE, this.config.codename(), owner,
                                 String.join("_", name, val), version, size
