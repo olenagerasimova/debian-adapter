@@ -12,7 +12,6 @@ import com.artipie.debian.http.DebianSlice;
 import com.artipie.http.auth.Authentication;
 import com.artipie.http.rs.RsStatus;
 import com.artipie.http.slice.LoggingSlice;
-import com.artipie.scheduling.EventQueue;
 import com.artipie.security.perms.Action;
 import com.artipie.security.perms.AdapterBasicPermission;
 import com.artipie.security.perms.EmptyPermissions;
@@ -28,6 +27,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.PermissionCollection;
+import java.util.Optional;
 import org.apache.commons.codec.binary.Base64;
 import org.cactoos.list.ListOf;
 import org.hamcrest.MatcherAssert;
@@ -199,7 +199,7 @@ public final class DebianAuthSliceITCase {
                             .build(),
                         storage
                     ),
-                    new EventQueue<>()
+                    Optional.empty()
                 )
             )
         );
