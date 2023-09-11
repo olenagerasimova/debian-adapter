@@ -61,7 +61,7 @@ class UpdateSliceTest {
     @BeforeEach
     void init() {
         this.asto = new InMemoryStorage();
-        this.events = new LinkedList<>();
+        this.events = new ConcurrentLinkedQueue<>();
     }
 
     @Test
