@@ -97,7 +97,7 @@ public final class DebianSliceITCase {
     @BeforeEach
     void init() throws IOException, InterruptedException {
         this.storage = new InMemoryStorage();
-        this.events = new LinkedList<>();
+        this.events = new ConcurrentLinkedQueue<>();
         this.server = new VertxSliceServer(
             DebianSliceITCase.VERTX,
             new LoggingSlice(
