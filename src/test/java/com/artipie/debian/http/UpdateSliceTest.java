@@ -20,8 +20,10 @@ import com.artipie.http.rq.RequestLine;
 import com.artipie.http.rq.RqMethod;
 import com.artipie.http.rs.RsStatus;
 import com.artipie.scheduling.ArtifactEvent;
-import com.artipie.scheduling.EventQueue;
 import java.io.IOException;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import org.cactoos.list.ListOf;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.IsEqual;
@@ -54,12 +56,12 @@ class UpdateSliceTest {
     /**
      * Artifact events queue.
      */
-    private EventQueue<ArtifactEvent> events;
+    private Queue<ArtifactEvent> events;
 
     @BeforeEach
     void init() {
         this.asto = new InMemoryStorage();
-        this.events = new EventQueue<>();
+        this.events = new ConcurrentLinkedQueue<>();
     }
 
     @Test
@@ -73,7 +75,7 @@ class UpdateSliceTest {
             new UpdateSlice(
                 this.asto,
                 new Config.FromYaml("my_repo", UpdateSliceTest.SETTINGS, new InMemoryStorage()),
-                this.events
+                Optional.of(this.events)
             ),
             new SliceHasResponse(
                 new RsHasStatus(RsStatus.OK),
@@ -121,7 +123,8 @@ class UpdateSliceTest {
                     "deb_repo",
                     UpdateSliceTest.SETTINGS,
                     new InMemoryStorage()
-                ), this.events
+                ),
+                Optional.of(this.events)
             ),
             new SliceHasResponse(
                 new RsHasStatus(RsStatus.OK),
@@ -169,7 +172,7 @@ class UpdateSliceTest {
                     UpdateSliceTest.SETTINGS,
                     new InMemoryStorage()
                 ),
-                this.events
+                Optional.of(this.events)
             ),
             new SliceHasResponse(
                 new RsHasStatus(RsStatus.BAD_REQUEST),
@@ -183,7 +186,7 @@ class UpdateSliceTest {
             this.asto.exists(new Key.From("main/aglfn_1.7-3_all.deb")).join(),
             new IsEqual<>(false)
         );
-        MatcherAssert.assertThat("Artifact event was not added to queue", this.events.size() == 0);
+        MatcherAssert.assertThat("Artifact event was not added to queue", this.events.isEmpty());
     }
 
     @Test
@@ -197,7 +200,7 @@ class UpdateSliceTest {
                     UpdateSliceTest.SETTINGS,
                     new InMemoryStorage()
                 ),
-                this.events
+                Optional.of(this.events)
             ),
             new SliceHasResponse(
                 new RsHasStatus(RsStatus.INTERNAL_ERROR),
@@ -211,7 +214,7 @@ class UpdateSliceTest {
             this.asto.exists(new Key.From("main/corrupted.deb")).join(),
             new IsEqual<>(false)
         );
-        MatcherAssert.assertThat("Artifact event was not added to queue", this.events.size() == 0);
+        MatcherAssert.assertThat("Artifact event was not added to queue", this.events.isEmpty());
     }
 
 }

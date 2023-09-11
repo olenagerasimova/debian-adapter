@@ -13,7 +13,6 @@ import com.artipie.debian.http.DebianSlice;
 import com.artipie.http.rs.RsStatus;
 import com.artipie.http.slice.LoggingSlice;
 import com.artipie.scheduling.ArtifactEvent;
-import com.artipie.scheduling.EventQueue;
 import com.artipie.vertx.VertxSliceServer;
 import com.jcabi.log.Logger;
 import io.vertx.reactivex.core.Vertx;
@@ -23,6 +22,9 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.regex.Pattern;
 import org.cactoos.list.ListOf;
 import org.hamcrest.MatcherAssert;
@@ -89,12 +91,12 @@ public final class DebianSliceITCase {
     /**
      * Artifact events queue.
      */
-    private EventQueue<ArtifactEvent> events;
+    private Queue<ArtifactEvent> events;
 
     @BeforeEach
     void init() throws IOException, InterruptedException {
         this.storage = new InMemoryStorage();
-        this.events = new EventQueue<>();
+        this.events = new ConcurrentLinkedQueue<>();
         this.server = new VertxSliceServer(
             DebianSliceITCase.VERTX,
             new LoggingSlice(
@@ -107,8 +109,7 @@ public final class DebianSliceITCase {
                             .add("Architectures", "amd64")
                             .build(),
                         new InMemoryStorage()
-                    ),
-                    this.events
+                    ), Optional.ofNullable(this.events)
                 )
             )
         );
@@ -192,6 +193,7 @@ public final class DebianSliceITCase {
             con.getResponseCode(),
             new IsEqual<>(Integer.parseInt(RsStatus.OK.code()))
         );
+        MatcherAssert.assertThat("Event was added to queue", this.events.size() == 1);
         this.exec("apt-get", "update");
         MatcherAssert.assertThat(
             "Package was downloaded and unpacked",
